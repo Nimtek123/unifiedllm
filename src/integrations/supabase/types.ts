@@ -14,7 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      datasets: {
+        Row: {
+          created_at: string | null
+          dify_dataset_id: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dify_dataset_id: string
+          id?: string
+          name?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dify_dataset_id?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "datasets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      files: {
+        Row: {
+          created_at: string | null
+          dataset_id: string
+          dify_document_id: string | null
+          file_size: number | null
+          file_type: string | null
+          filename: string
+          id: string
+          upload_status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dataset_id: string
+          dify_document_id?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          filename: string
+          id?: string
+          upload_status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dataset_id?: string
+          dify_document_id?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          filename?: string
+          id?: string
+          upload_status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      workflows: {
+        Row: {
+          created_at: string | null
+          dataset_id: string
+          dify_workflow_id: string
+          id: string
+          name: string
+          user_id: string
+          workflow_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          dataset_id: string
+          dify_workflow_id: string
+          id?: string
+          name?: string
+          user_id: string
+          workflow_url: string
+        }
+        Update: {
+          created_at?: string | null
+          dataset_id?: string
+          dify_workflow_id?: string
+          id?: string
+          name?: string
+          user_id?: string
+          workflow_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
