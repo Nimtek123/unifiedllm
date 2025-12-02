@@ -81,7 +81,7 @@ const Upload = () => {
     formData.append("indexing_technique", indexingTechnique);
 
     try {
-      const response = await fetch("http://158.220.104.64:3000/upload-kb", {
+      const response = await fetch("https://proxy.unified-bi.org/upload-kb", {
         method: "POST",
         body: formData,
       });
