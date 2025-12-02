@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload, MessageSquare, FileText, LogOut } from "lucide-react";
+import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 
 const Dashboard = () => {
@@ -143,7 +143,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+        <div className="grid gap-6 md:grid-cols-3 animate-slide-up" style={{ animationDelay: "0.2s" }}>
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -167,6 +167,27 @@ const Dashboard = () => {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-primary" />
+                Manage Documents
+              </CardTitle>
+              <CardDescription>
+                View, manage, and delete your uploaded documents
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                className="w-full"
+                variant="outline"
+                onClick={() => navigate("/documents")}
+              >
+                View Documents
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-primary" />
                 Chat with AI
               </CardTitle>
@@ -178,9 +199,9 @@ const Dashboard = () => {
               <Button 
                 className="w-full"
                 onClick={() => navigate("/chat")}
-                disabled={!hasWorkflow}
+                disabled={fileCount === 0}
               >
-                {hasWorkflow ? "Start Chatting" : "Setup Required"}
+                {fileCount > 0 ? "Start Chatting" : "Upload Docs First"}
               </Button>
             </CardContent>
           </Card>
