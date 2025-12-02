@@ -88,9 +88,11 @@ serve(async (req) => {
 
     const difyFormData = new FormData();
     difyFormData.append('file', file);
-    difyFormData.append('indexing_technique', 'high_quality');
-    difyFormData.append('process_rule', JSON.stringify({
-      mode: 'automatic',
+    difyFormData.append('data', JSON.stringify({
+      indexing_technique: 'high_quality',
+      process_rule: {
+        mode: 'automatic',
+      },
     }));
 
     const uploadResponse = await fetch(
