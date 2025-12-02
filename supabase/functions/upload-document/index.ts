@@ -86,22 +86,32 @@ serve(async (req) => {
     const difyDatasetId = dataset.data.dify_dataset_id;
     console.log(`Using dataset: ${difyDatasetId}`);
 
-    const kbFormData = new FormData();
-    kbFormData.append('files', file);
+    const difyFormData = new FormData();
+    difyFormData.append('file', file);
+    difyFormData.append('name', file.name);
+    difyFormData.append('indexing_technique', 'high_quality');
+    difyFormData.append('pre_processing_rules', '[]');
+    difyFormData.append('process_rule', '{"mode":"automatic"}');
 
-    const uploadResponse = await fetch('http://158.220.104.64:3000/upload-kb', {
-      method: 'POST',
-      body: kbFormData,
-    });
+    const uploadResponse = await fetch(
+      `http://dify.unified-bi.org/v1/datasets/${difyDatasetId}/document/create_by_file`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${difyApiKey}`,
+        },
+        body: difyFormData,
+      }
+    );
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('KB upload failed:', errorText);
-      throw new Error('Failed to upload to knowledge base');
+      console.error('Dify upload failed:', errorText);
+      throw new Error('Failed to upload to Dify');
     }
 
-    const kbDocument = await uploadResponse.json();
-    console.log('Document uploaded to KB:', kbDocument);
+    const difyDocument = await uploadResponse.json();
+    console.log('Document uploaded to Dify:', difyDocument);
 
     const { error: fileInsertError } = await supabaseClient
       .from('files')
@@ -111,7 +121,7 @@ serve(async (req) => {
         filename: file.name,
         file_size: file.size,
         file_type: file.type,
-        dify_document_id: kbDocument.id || null,
+        dify_document_id: difyDocument.document?.id || null,
         upload_status: 'completed',
       });
 
@@ -151,7 +161,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        documentId: kbDocument.id || null,
+        documentId: difyDocument.document?.id || null,
         datasetId: difyDatasetId,
       }),
       {
