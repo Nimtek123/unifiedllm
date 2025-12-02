@@ -93,15 +93,45 @@ const Upload = () => {
       if (response.ok) {
         toast.success(`Success! ${result.uploaded} of ${result.total} files uploaded.`);
         
+        // Get or create dataset for the user
+        let { data: dataset } = await supabase
+          .from("datasets")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!dataset) {
+          const { data: newDataset, error: datasetError } = await supabase
+            .from("datasets")
+            .insert({
+              user_id: user.id,
+              name: "My Knowledge Base",
+              dify_dataset_id: "pending",
+            })
+            .select()
+            .single();
+
+          if (datasetError) {
+            console.error("Error creating dataset:", datasetError);
+            toast.error("Failed to save file record");
+            return;
+          }
+          dataset = newDataset;
+        }
+
         // Save file records to local database
-        for (const file of selectedFiles) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const resultData = result.results?.[i];
+          
           await supabase.from("files").insert({
             user_id: user.id,
             filename: file.name,
             file_size: file.size,
             file_type: file.type,
             upload_status: "completed",
-            dataset_id: user.id, // Using user_id as placeholder
+            dataset_id: dataset.id,
+            dify_document_id: resultData?.data?.document?.id || null,
           });
         }
         
