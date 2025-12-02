@@ -48,11 +48,18 @@ const Dashboard = () => {
         .single();
       setProfile(profileData);
 
-      const { count } = await supabase
-        .from("files")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId);
-      setFileCount(count || 0);
+      // Fetch document count from Dify API via edge function
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.access_token) {
+        const { data, error } = await supabase.functions.invoke('get-documents', {
+          headers: {
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+        });
+        if (!error && data) {
+          setFileCount(data.total || 0);
+        }
+      }
 
       const { data: workflow } = await supabase
         .from("workflows")
