@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, FileText, Upload } from "lucide-react";
 
+const PROXY_URL = "https://proxy.unified-bi.org";
+
 const Chat = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +19,7 @@ const Chat = () => {
         navigate("/auth");
         return;
       }
-      await checkDocuments(session.user.id);
+      await checkDocuments();
     };
 
     checkAuth();
@@ -31,14 +33,13 @@ const Chat = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const checkDocuments = async (userId: string) => {
+  const checkDocuments = async () => {
     try {
-      const { count } = await supabase
-        .from("files")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId);
-      
-      setHasDocuments((count || 0) > 0);
+      const response = await fetch(`${PROXY_URL}/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setHasDocuments((data.total || data.data?.length || 0) > 0);
+      }
     } catch (error) {
       console.error("Error checking documents:", error);
     } finally {

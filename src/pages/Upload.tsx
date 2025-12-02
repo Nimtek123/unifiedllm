@@ -4,19 +4,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload as UploadIcon, File, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload as UploadIcon, File, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+
+const PROXY_URL = "https://proxy.unified-bi.org";
 
 const Upload = () => {
   const navigate = useNavigate();
   const [isUploading, setIsUploading] = useState(false);
-  const [files, setFiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [indexingTechnique, setIndexingTechnique] = useState("high_quality");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -25,8 +26,7 @@ const Upload = () => {
         navigate("/auth");
         return;
       }
-      setUser(session.user);
-      await loadFiles(session.user.id);
+      await loadDocuments();
     };
 
     checkAuth();
@@ -40,19 +40,15 @@ const Upload = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const loadFiles = async (userId: string) => {
+  const loadDocuments = async () => {
     try {
-      const { data, error } = await supabase
-        .from("files")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setFiles(data || []);
-    } catch (error: any) {
-      console.error("Error loading files:", error);
-      toast.error("Failed to load files");
+      const response = await fetch(`${PROXY_URL}/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading documents:", error);
     } finally {
       setIsLoading(false);
     }
@@ -81,61 +77,17 @@ const Upload = () => {
     formData.append("indexing_technique", indexingTechnique);
 
     try {
-      const response = await fetch("https://proxy.unified-bi.org/upload-kb", {
+      const response = await fetch(`${PROXY_URL}/upload-kb`, {
         method: "POST",
         body: formData,
       });
 
       const result = await response.json();
-
       setUploadProgress(100);
 
       if (response.ok) {
         toast.success(`Success! ${result.uploaded} of ${result.total} files uploaded.`);
-        
-        // Get or create dataset for the user
-        let { data: dataset } = await supabase
-          .from("datasets")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!dataset) {
-          const { data: newDataset, error: datasetError } = await supabase
-            .from("datasets")
-            .insert({
-              user_id: user.id,
-              name: "My Knowledge Base",
-              dify_dataset_id: "pending",
-            })
-            .select()
-            .single();
-
-          if (datasetError) {
-            console.error("Error creating dataset:", datasetError);
-            toast.error("Failed to save file record");
-            return;
-          }
-          dataset = newDataset;
-        }
-
-        // Save file records to local database
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
-          const resultData = result.results?.[i];
-          
-          await supabase.from("files").insert({
-            user_id: user.id,
-            filename: file.name,
-            file_size: file.size,
-            file_type: file.type,
-            upload_status: "completed",
-            dataset_id: dataset.id,
-            dify_document_id: resultData?.data?.document?.id || null,
-          });
-        }
-        
-        await loadFiles(user.id);
+        await loadDocuments();
         setSelectedFiles([]);
       } else {
         toast.error(`Upload failed: ${result.error || "Unknown error"}`);
@@ -149,26 +101,10 @@ const Upload = () => {
     }
   };
 
-  const handleDeleteFile = async (fileId: string) => {
-    try {
-      const { error } = await supabase
-        .from("files")
-        .delete()
-        .eq("id", fileId);
-
-      if (error) throw error;
-
-      toast.success("File deleted successfully");
-      await loadFiles(user.id);
-    } catch (error: any) {
-      console.error("Delete error:", error);
-      toast.error("Failed to delete file");
-    }
-  };
-
   const formatFileSize = (bytes: number) => {
     if (!bytes) return "Unknown size";
     const mb = bytes / (1024 * 1024);
+    if (mb < 0.01) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${mb.toFixed(2)} MB`;
   };
 
@@ -279,7 +215,7 @@ const Upload = () => {
             <CardHeader>
               <CardTitle>Your Files</CardTitle>
               <CardDescription>
-                {files.length} {files.length === 1 ? "file" : "files"} in your knowledge base
+                {documents.length} {documents.length === 1 ? "file" : "files"} in your knowledge base
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -287,35 +223,27 @@ const Upload = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              ) : files.length === 0 ? (
+              ) : documents.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <File className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>No files uploaded yet</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {files.map((file) => (
+                  {documents.map((doc: any) => (
                     <div
-                      key={file.id}
+                      key={doc.id}
                       className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <File className="w-5 h-5 text-primary flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{file.filename}</p>
+                          <p className="text-sm font-medium truncate">{doc.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {formatFileSize(file.file_size)} • {file.upload_status}
+                            {doc.indexing_status || "completed"}
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteFile(file.id)}
-                        className="flex-shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
