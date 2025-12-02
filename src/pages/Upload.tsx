@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Upload as UploadIcon, File, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -12,6 +14,9 @@ const Upload = () => {
   const [files, setFiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [indexingTechnique, setIndexingTechnique] = useState("high_quality");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,42 +58,64 @@ const Upload = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files;
-    if (!selectedFiles || selectedFiles.length === 0) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(Array.from(files));
+    }
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error("Please select files to upload");
+      return;
+    }
 
     setIsUploading(true);
-    let successCount = 0;
-    let failCount = 0;
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    for (const file of selectedFiles) {
+      formData.append("files", file);
+    }
+    formData.append("indexing_technique", indexingTechnique);
 
     try {
-      for (const file of Array.from(selectedFiles)) {
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
+      const response = await fetch("http://158.220.104.64:3000/upload-kb", {
+        method: "POST",
+        body: formData,
+      });
 
-          const { data, error } = await supabase.functions.invoke("upload-document", {
-            body: formData,
+      const result = await response.json();
+
+      setUploadProgress(100);
+
+      if (response.ok) {
+        toast.success(`Success! ${result.uploaded} of ${result.total} files uploaded.`);
+        
+        // Save file records to local database
+        for (const file of selectedFiles) {
+          await supabase.from("files").insert({
+            user_id: user.id,
+            filename: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            upload_status: "completed",
+            dataset_id: user.id, // Using user_id as placeholder
           });
-
-          if (error) throw error;
-          successCount++;
-        } catch (error: any) {
-          console.error(`Upload error for ${file.name}:`, error);
-          failCount++;
         }
+        
+        await loadFiles(user.id);
+        setSelectedFiles([]);
+      } else {
+        toast.error(`Upload failed: ${result.error || "Unknown error"}`);
       }
-
-      if (successCount > 0) {
-        toast.success(`${successCount} file(s) uploaded successfully!`);
-      }
-      if (failCount > 0) {
-        toast.error(`${failCount} file(s) failed to upload`);
-      }
-      await loadFiles(user.id);
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      toast.error(`Network error: ${err.message}`);
     } finally {
       setIsUploading(false);
-      e.target.value = "";
+      setTimeout(() => setUploadProgress(0), 3000);
     }
   };
 
@@ -135,18 +162,18 @@ const Upload = () => {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
-              <CardTitle>Upload New File</CardTitle>
+              <CardTitle>Upload New Files</CardTitle>
               <CardDescription>
                 Supported formats: PDF, DOCX, TXT (Max 20MB)
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
                 <UploadIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium mb-1">
-                      Drop your file here or click to browse
+                      Drop your files here or click to browse
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Files will be processed and added to your knowledge base
@@ -155,28 +182,66 @@ const Upload = () => {
                   <input
                     type="file"
                     id="file-upload"
+                    name="files"
                     className="hidden"
                     accept=".pdf,.docx,.txt"
                     multiple
-                    onChange={handleFileUpload}
+                    onChange={handleFileSelect}
                     disabled={isUploading}
                   />
                   <label htmlFor="file-upload">
-                    <Button asChild disabled={isUploading}>
-                      <span>
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          "Select File"
-                        )}
-                      </span>
+                    <Button asChild variant="outline" disabled={isUploading}>
+                      <span>Select Files</span>
                     </Button>
                   </label>
                 </div>
               </div>
+
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2 p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">Selected files:</p>
+                  {selectedFiles.map((file, idx) => (
+                    <p key={idx} className="text-xs text-muted-foreground">
+                      • {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Indexing Technique</label>
+                <Select value={indexingTechnique} onValueChange={setIndexingTechnique}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high_quality">High Quality</SelectItem>
+                    <SelectItem value="economy">Economy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {uploadProgress > 0 && (
+                <div className="space-y-2">
+                  <Progress value={uploadProgress} />
+                  <p className="text-xs text-center text-muted-foreground">{uploadProgress}%</p>
+                </div>
+              )}
+
+              <Button 
+                className="w-full" 
+                onClick={handleUpload} 
+                disabled={isUploading || selectedFiles.length === 0}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload All Files"
+                )}
+              </Button>
             </CardContent>
           </Card>
 
