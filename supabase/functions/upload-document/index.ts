@@ -87,11 +87,14 @@ serve(async (req) => {
     console.log(`Using dataset: ${difyDatasetId}`);
 
     const difyFormData = new FormData();
-    difyFormData.append('file', file);
-    difyFormData.append('name', file.name);
-    difyFormData.append('indexing_technique', 'high_quality');
-    difyFormData.append('pre_processing_rules', '[]');
-    difyFormData.append('process_rule', '{"mode":"automatic"}');
+    difyFormData.append('file', file, file.name);
+    difyFormData.append('data', JSON.stringify({
+      name: file.name,
+      indexing_technique: 'high_quality',
+      process_rule: {
+        mode: 'automatic'
+      }
+    }));
 
     const uploadResponse = await fetch(
       `http://dify.unified-bi.org/v1/datasets/${difyDatasetId}/document/create_by_file`,
