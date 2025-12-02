@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,36 +7,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Brain, Sparkles } from "lucide-react";
+import { account, ID } from "@/lib/appwrite";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
+
+  const selectedPlan = location.state?.selectedPlan;
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!captchaToken) {
+      toast.error("Please complete the CAPTCHA verification");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-
-      if (error) throw error;
-
-      toast.success("Account created! Signing you in...");
+      await account.create(ID.unique(), email, password, fullName);
+      await account.createEmailPasswordSession(email, password);
+      toast.success("Account created! Welcome to Unified LLM Portal");
       navigate("/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -45,23 +48,29 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!captchaToken) {
+      toast.error("Please complete the CAPTCHA verification");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
+      await account.createEmailPasswordSession(email, password);
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
+      toast.error(error.message || "Invalid email or password");
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const onCaptchaChange = (token: string | null) => {
+    setCaptchaToken(token);
   };
 
   return (
@@ -72,7 +81,9 @@ const Auth = () => {
             <Brain className="w-8 h-8" />
           </div>
           <h1 className="text-3xl font-bold mb-2">Unified LLM Portal</h1>
-          <p className="text-muted-foreground">Your private AI knowledge assistant</p>
+          <p className="text-muted-foreground">
+            {selectedPlan ? `Sign up for ${selectedPlan} plan` : "Your private AI knowledge assistant"}
+          </p>
         </div>
 
         <Card className="shadow-lg">
@@ -81,7 +92,7 @@ const Auth = () => {
             <CardDescription>Sign in or create a new account</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue={selectedPlan ? "signup" : "signin"} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -111,6 +122,13 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading}
+                    />
+                  </div>
+                  <div className="flex justify-center">
+                    <ReCAPTCHA
+                      ref={recaptchaRef}
+                      sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                      onChange={onCaptchaChange}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -155,7 +173,14 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading}
-                      minLength={6}
+                      minLength={8}
+                    />
+                  </div>
+                  <div className="flex justify-center">
+                    <ReCAPTCHA
+                      ref={recaptchaRef}
+                      sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                      onChange={onCaptchaChange}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -168,7 +193,10 @@ const Auth = () => {
         </Card>
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
-          <div className="flex items-center justify-center gap-2">
+          <a href="/pricing" className="text-primary hover:underline mr-4">
+            View pricing plans
+          </a>
+          <div className="flex items-center justify-center gap-2 mt-2">
             <Sparkles className="w-4 h-4 text-accent" />
             <span>Powered by Dify AI</span>
           </div>

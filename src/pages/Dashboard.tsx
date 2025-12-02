@@ -1,72 +1,74 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen } from "lucide-react";
+import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings } from "lucide-react";
 import { toast } from "sonner";
-
-const PROXY_URL = "https://proxy.unified-bi.org";
+import { account, databases, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
   const [fileCount, setFileCount] = useState(0);
+  const [hasApiSettings, setHasApiSettings] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-      setUser(session.user);
-      await loadDashboardData(session.user.id);
-    };
-
     checkAuth();
+  }, []);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        loadDashboardData(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const loadDashboardData = async (userId: string) => {
+  const checkAuth = async () => {
     try {
-      // Load profile from Supabase
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      setProfile(profileData);
-
-      // Fetch document count from proxy
-      const response = await fetch(`${PROXY_URL}/documents`);
-      if (response.ok) {
-        const data = await response.json();
-        setFileCount(data.total || data.data?.length || 0);
-      }
-    } catch (error: any) {
-      console.error("Error loading dashboard:", error);
+      const currentUser = await account.get();
+      setUser(currentUser);
+      await loadUserSettings(currentUser.$id);
+    } catch (error) {
+      navigate("/auth");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadUserSettings = async (userId: string) => {
+    try {
+      const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const userSettings = response.documents.find((doc: any) => doc.userId === userId);
+      
+      if (userSettings?.datasetId && userSettings?.apiKey) {
+        setHasApiSettings(true);
+        await fetchDocumentCount(userSettings.datasetId, userSettings.apiKey);
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    }
+  };
+
+  const fetchDocumentCount = async (datasetId: string, apiKey: string) => {
+    try {
+      const response = await fetch(
+        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=20`,
+        {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setFileCount(data.total || data.data?.length || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    }
+  };
+
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    toast.success("Signed out successfully");
-    navigate("/auth");
+    try {
+      await account.deleteSession("current");
+      toast.success("Signed out successfully");
+      navigate("/auth");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   if (isLoading) {
@@ -87,20 +89,36 @@ const Dashboard = () => {
             </div>
             <h1 className="text-xl font-bold">Unified LLM Portal</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/settings")}>
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
-          <h2 className="text-3xl font-bold mb-2">
-            Welcome back, {profile?.full_name || "User"}!
-          </h2>
+          <h2 className="text-3xl font-bold mb-2">Welcome back, {user?.name || "User"}!</h2>
           <p className="text-muted-foreground">Manage your knowledge base and chat with your AI assistant</p>
         </div>
+
+        {!hasApiSettings && (
+          <Card className="mb-8 border-amber-500/50 bg-amber-500/10 animate-slide-up">
+            <CardContent className="py-4">
+              <p className="text-amber-700 dark:text-amber-300">
+                Please configure your API settings to start using the portal.{" "}
+                <Button variant="link" className="p-0 h-auto text-amber-700 dark:text-amber-300 underline" onClick={() => navigate("/settings")}>
+                  Go to Settings
+                </Button>
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-3 mb-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
           <Card>
@@ -120,9 +138,9 @@ const Dashboard = () => {
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{fileCount > 0 ? "Active" : "Setup Required"}</div>
+              <div className="text-2xl font-bold">{hasApiSettings && fileCount > 0 ? "Active" : "Setup Required"}</div>
               <p className="text-xs text-muted-foreground">
-                {fileCount > 0 ? "Ready to chat" : "Upload documents first"}
+                {hasApiSettings ? (fileCount > 0 ? "Ready to chat" : "Upload documents first") : "Configure API settings"}
               </p>
             </CardContent>
           </Card>
@@ -146,16 +164,11 @@ const Dashboard = () => {
                 <Upload className="w-5 h-5 text-primary" />
                 Upload Documents
               </CardTitle>
-              <CardDescription>
-                Add PDFs, DOCX, or TXT files to your private knowledge base
-              </CardDescription>
+              <CardDescription>Add PDFs, DOCX, or TXT files to your private knowledge base</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                className="w-full" 
-                onClick={() => navigate("/upload")}
-              >
-                Go to Upload
+              <Button className="w-full" onClick={() => navigate("/upload")} disabled={!hasApiSettings}>
+                {hasApiSettings ? "Go to Upload" : "Configure Settings First"}
               </Button>
             </CardContent>
           </Card>
@@ -166,16 +179,10 @@ const Dashboard = () => {
                 <FolderOpen className="w-5 h-5 text-primary" />
                 Manage Documents
               </CardTitle>
-              <CardDescription>
-                View, manage, and delete your uploaded documents
-              </CardDescription>
+              <CardDescription>View, manage, and delete your uploaded documents</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                className="w-full"
-                variant="outline"
-                onClick={() => navigate("/documents")}
-              >
+              <Button className="w-full" variant="outline" onClick={() => navigate("/documents")} disabled={!hasApiSettings}>
                 View Documents
               </Button>
             </CardContent>
@@ -187,17 +194,11 @@ const Dashboard = () => {
                 <MessageSquare className="w-5 h-5 text-primary" />
                 Chat with AI
               </CardTitle>
-              <CardDescription>
-                Query your documents using natural language
-              </CardDescription>
+              <CardDescription>Query your documents using natural language</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                className="w-full"
-                onClick={() => navigate("/chat")}
-                disabled={fileCount === 0}
-              >
-                {fileCount > 0 ? "Start Chatting" : "Upload Docs First"}
+              <Button className="w-full" onClick={() => navigate("/chat")} disabled={!hasApiSettings || fileCount === 0}>
+                {hasApiSettings ? (fileCount > 0 ? "Start Chatting" : "Upload Docs First") : "Configure Settings First"}
               </Button>
             </CardContent>
           </Card>
