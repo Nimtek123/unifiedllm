@@ -87,7 +87,7 @@ serve(async (req) => {
     console.log(`Using dataset: ${difyDatasetId}`);
 
     const kbFormData = new FormData();
-    kbFormData.append('file', file);
+    kbFormData.append('files', file);
 
     const uploadResponse = await fetch('http://158.220.104.64:3000/upload-kb', {
       method: 'POST',
