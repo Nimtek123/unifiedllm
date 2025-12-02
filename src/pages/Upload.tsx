@@ -58,23 +58,34 @@ const Upload = () => {
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     setIsUploading(true);
+    let successCount = 0;
+    let failCount = 0;
 
     try {
-      const file = selectedFiles[0];
-      const formData = new FormData();
-      formData.append("file", file);
+      for (const file of Array.from(selectedFiles)) {
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
 
-      const { data, error } = await supabase.functions.invoke("upload-document", {
-        body: formData,
-      });
+          const { data, error } = await supabase.functions.invoke("upload-document", {
+            body: formData,
+          });
 
-      if (error) throw error;
+          if (error) throw error;
+          successCount++;
+        } catch (error: any) {
+          console.error(`Upload error for ${file.name}:`, error);
+          failCount++;
+        }
+      }
 
-      toast.success("File uploaded successfully!");
+      if (successCount > 0) {
+        toast.success(`${successCount} file(s) uploaded successfully!`);
+      }
+      if (failCount > 0) {
+        toast.error(`${failCount} file(s) failed to upload`);
+      }
       await loadFiles(user.id);
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast.error(error.message || "Failed to upload file");
     } finally {
       setIsUploading(false);
       e.target.value = "";
@@ -146,6 +157,7 @@ const Upload = () => {
                     id="file-upload"
                     className="hidden"
                     accept=".pdf,.docx,.txt"
+                    multiple
                     onChange={handleFileUpload}
                     disabled={isUploading}
                   />

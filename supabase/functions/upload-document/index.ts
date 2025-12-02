@@ -86,34 +86,22 @@ serve(async (req) => {
     const difyDatasetId = dataset.data.dify_dataset_id;
     console.log(`Using dataset: ${difyDatasetId}`);
 
-    const difyFormData = new FormData();
-    difyFormData.append('file', file);
-    difyFormData.append('data', JSON.stringify({
-      indexing_technique: 'high_quality',
-      process_rule: {
-        mode: 'automatic',
-      },
-    }));
+    const kbFormData = new FormData();
+    kbFormData.append('file', file);
 
-    const uploadResponse = await fetch(
-      `http://dify.unified-bi.org/v1/datasets/${difyDatasetId}/document/create_by_file`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${difyApiKey}`,
-        },
-        body: difyFormData,
-      }
-    );
+    const uploadResponse = await fetch('http://158.220.104.64:3000/upload-kb', {
+      method: 'POST',
+      body: kbFormData,
+    });
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('Dify upload failed:', errorText);
-      throw new Error('Failed to upload to Dify');
+      console.error('KB upload failed:', errorText);
+      throw new Error('Failed to upload to knowledge base');
     }
 
-    const difyDocument = await uploadResponse.json();
-    console.log('Document uploaded to Dify:', difyDocument.document?.id);
+    const kbDocument = await uploadResponse.json();
+    console.log('Document uploaded to KB:', kbDocument);
 
     const { error: fileInsertError } = await supabaseClient
       .from('files')
@@ -123,7 +111,7 @@ serve(async (req) => {
         filename: file.name,
         file_size: file.size,
         file_type: file.type,
-        dify_document_id: difyDocument.document?.id,
+        dify_document_id: kbDocument.id || null,
         upload_status: 'completed',
       });
 
@@ -163,7 +151,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        documentId: difyDocument.document?.id,
+        documentId: kbDocument.id || null,
         datasetId: difyDatasetId,
       }),
       {
