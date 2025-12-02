@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 
+const PROXY_URL = "https://proxy.unified-bi.org";
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [fileCount, setFileCount] = useState(0);
-  const [hasWorkflow, setHasWorkflow] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -41,6 +42,7 @@ const Dashboard = () => {
 
   const loadDashboardData = async (userId: string) => {
     try {
+      // Load profile from Supabase
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -48,25 +50,12 @@ const Dashboard = () => {
         .single();
       setProfile(profileData);
 
-      // Fetch document count from Dify API via edge function
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.access_token) {
-        const { data, error } = await supabase.functions.invoke('get-documents', {
-          headers: {
-            Authorization: `Bearer ${session.session.access_token}`,
-          },
-        });
-        if (!error && data) {
-          setFileCount(data.total || 0);
-        }
+      // Fetch document count from proxy
+      const response = await fetch(`${PROXY_URL}/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setFileCount(data.total || data.data?.length || 0);
       }
-
-      const { data: workflow } = await supabase
-        .from("workflows")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      setHasWorkflow(!!workflow);
     } catch (error: any) {
       console.error("Error loading dashboard:", error);
     } finally {
@@ -131,9 +120,9 @@ const Dashboard = () => {
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{hasWorkflow ? "Active" : "Setup Required"}</div>
+              <div className="text-2xl font-bold">{fileCount > 0 ? "Active" : "Setup Required"}</div>
               <p className="text-xs text-muted-foreground">
-                {hasWorkflow ? "Ready to chat" : "Configure your workflow"}
+                {fileCount > 0 ? "Ready to chat" : "Upload documents first"}
               </p>
             </CardContent>
           </Card>

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Trash2, FileText, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -20,60 +19,47 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface FileRecord {
-  id: string;
-  filename: string;
-  file_type: string | null;
-  file_size: number | null;
-  created_at: string | null;
-  dify_document_id: string | null;
-  upload_status: string | null;
-}
-
+const PROXY_URL = "https://proxy.unified-bi.org";
 const ITEMS_PER_PAGE = 10;
+
+interface DifyDocument {
+  id: string;
+  name: string;
+  data_source_type: string;
+  indexing_status: string;
+  word_count: number | null;
+  created_at: number;
+  enabled: boolean;
+}
 
 const Documents = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [files, setFiles] = useState<FileRecord[]>([]);
-  const [allFiles, setAllFiles] = useState<FileRecord[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [documents, setDocuments] = useState<DifyDocument[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [fileTypeFilter, setFileTypeFilter] = useState<string>("all");
 
-  // Get unique file types for filter dropdown
-  const fileTypes = useMemo(() => {
-    const types = new Set<string>();
-    allFiles.forEach((file) => {
-      if (file.file_type) types.add(file.file_type);
+  // Filter documents based on search
+  const filteredDocuments = useMemo(() => {
+    return documents.filter((doc) => {
+      return searchQuery === "" || 
+        doc.name.toLowerCase().includes(searchQuery.toLowerCase());
     });
-    return Array.from(types).sort();
-  }, [allFiles]);
+  }, [documents, searchQuery]);
 
-  // Filter files based on search and file type
-  const filteredFiles = useMemo(() => {
-    return allFiles.filter((file) => {
-      const matchesSearch = searchQuery === "" || 
-        file.filename.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = fileTypeFilter === "all" || file.file_type === fileTypeFilter;
-      return matchesSearch && matchesType;
-    });
-  }, [allFiles, searchQuery, fileTypeFilter]);
-
-  // Paginate filtered files
-  const paginatedFiles = useMemo(() => {
+  // Paginate filtered documents
+  const paginatedDocuments = useMemo(() => {
     const from = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredFiles.slice(from, from + ITEMS_PER_PAGE);
-  }, [filteredFiles, currentPage]);
+    return filteredDocuments.slice(from, from + ITEMS_PER_PAGE);
+  }, [filteredDocuments, currentPage]);
 
-  const totalPages = Math.ceil(filteredFiles.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredDocuments.length / ITEMS_PER_PAGE);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, fileTypeFilter]);
+  }, [searchQuery]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -82,7 +68,7 @@ const Documents = () => {
         navigate("/auth");
         return;
       }
-      await loadFiles(session.user.id);
+      await loadDocuments();
     };
 
     checkAuth();
@@ -96,55 +82,36 @@ const Documents = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const loadFiles = async (userId: string) => {
+  const loadDocuments = async () => {
     try {
       setIsLoading(true);
-
-      const { data, error, count } = await supabase
-        .from("files")
-        .select("*", { count: "exact" })
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setAllFiles(data || []);
-      setTotalCount(count || 0);
+      const response = await fetch(`${PROXY_URL}/documents`);
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.data || []);
+      }
     } catch (error: any) {
-      console.error("Error loading files:", error);
+      console.error("Error loading documents:", error);
       toast.error("Failed to load documents");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (file: FileRecord) => {
-    setDeletingId(file.id);
+  const handleDelete = async (doc: DifyDocument) => {
+    setDeletingId(doc.id);
     
     try {
-      // Delete from Dify if document ID exists
-      if (file.dify_document_id) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await supabase.functions.invoke("delete-document", {
-            body: { documentId: file.dify_document_id }
-          });
-        }
-      }
+      const response = await fetch(`${PROXY_URL}/documents/${doc.id}`, {
+        method: "DELETE",
+      });
 
-      // Delete from database
-      const { error } = await supabase
-        .from("files")
-        .delete()
-        .eq("id", file.id);
-
-      if (error) throw error;
-
-      toast.success("Document deleted successfully");
-      
-      // Reload files
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await loadFiles(session.user.id);
+      if (response.ok) {
+        toast.success("Document deleted successfully");
+        await loadDocuments();
+      } else {
+        const error = await response.json();
+        toast.error(`Failed to delete: ${error.message || "Unknown error"}`);
       }
     } catch (error: any) {
       console.error("Error deleting document:", error);
@@ -156,26 +123,18 @@ const Documents = () => {
 
   const clearFilters = () => {
     setSearchQuery("");
-    setFileTypeFilter("all");
   };
 
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return "—";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (timestamp: number) => {
+    if (!timestamp) return "—";
+    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
   };
 
-  const hasActiveFilters = searchQuery !== "" || fileTypeFilter !== "all";
+  const hasActiveFilters = searchQuery !== "";
 
   if (isLoading) {
     return (
@@ -206,14 +165,14 @@ const Documents = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Your Documents ({totalCount})
+              Your Documents ({documents.length})
             </CardTitle>
             <CardDescription>
               Manage files in your knowledge base
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {totalCount === 0 ? (
+            {documents.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p className="text-lg font-medium mb-1">No documents yet</p>
@@ -222,7 +181,7 @@ const Documents = () => {
               </div>
             ) : (
               <>
-                {/* Search and Filter Bar */}
+                {/* Search Bar */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -233,19 +192,6 @@ const Documents = () => {
                       className="pl-9"
                     />
                   </div>
-                  <Select value={fileTypeFilter} onValueChange={setFileTypeFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All types</SelectItem>
-                      {fileTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   {hasActiveFilters && (
                     <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
                       <X className="w-4 h-4" />
@@ -257,15 +203,15 @@ const Documents = () => {
                 {/* Results info */}
                 {hasActiveFilters && (
                   <p className="text-sm text-muted-foreground mb-4">
-                    Showing {filteredFiles.length} of {totalCount} documents
+                    Showing {filteredDocuments.length} of {documents.length} documents
                   </p>
                 )}
 
-                {paginatedFiles.length === 0 ? (
+                {paginatedDocuments.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-1">No matching documents</p>
-                    <p className="text-sm mb-4">Try adjusting your search or filters</p>
+                    <p className="text-sm mb-4">Try adjusting your search</p>
                     <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
                   </div>
                 ) : (
@@ -274,33 +220,31 @@ const Documents = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Filename</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Size</TableHead>
-                          <TableHead>Uploaded</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Words</TableHead>
+                          <TableHead>Created</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedFiles.map((file) => (
-                          <TableRow key={file.id}>
+                        {paginatedDocuments.map((doc) => (
+                          <TableRow key={doc.id}>
                             <TableCell className="font-medium max-w-[200px] truncate">
-                              {file.filename}
+                              {doc.name}
                             </TableCell>
-                            <TableCell>{file.file_type || "—"}</TableCell>
-                            <TableCell>{formatFileSize(file.file_size)}</TableCell>
-                            <TableCell>{formatDate(file.created_at)}</TableCell>
                             <TableCell>
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                file.upload_status === "completed" 
+                                doc.indexing_status === "completed" 
                                   ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                  : file.upload_status === "pending"
+                                  : doc.indexing_status === "indexing" || doc.indexing_status === "parsing"
                                   ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                                   : "bg-muted text-muted-foreground"
                               }`}>
-                                {file.upload_status || "unknown"}
+                                {doc.indexing_status}
                               </span>
                             </TableCell>
+                            <TableCell>{doc.word_count || "—"}</TableCell>
+                            <TableCell>{formatDate(doc.created_at)}</TableCell>
                             <TableCell className="text-right">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -308,9 +252,9 @@ const Documents = () => {
                                     variant="ghost"
                                     size="sm"
                                     className="text-destructive hover:text-destructive"
-                                    disabled={deletingId === file.id}
+                                    disabled={deletingId === doc.id}
                                   >
-                                    {deletingId === file.id ? (
+                                    {deletingId === doc.id ? (
                                       <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (
                                       <Trash2 className="w-4 h-4" />
@@ -321,13 +265,13 @@ const Documents = () => {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Document</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{file.filename}"? This will also remove it from your knowledge base and cannot be undone.
+                                      Are you sure you want to delete "{doc.name}"? This will remove it from your knowledge base and cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => handleDelete(file)}
+                                      onClick={() => handleDelete(doc)}
                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                     >
                                       Delete
