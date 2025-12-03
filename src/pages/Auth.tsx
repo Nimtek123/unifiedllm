@@ -48,22 +48,23 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const account = new account(client);
-
-      // Log in the user
-
+      // Create a new user
       await account.create(ID.unique(), email, password, fullName);
-      const session = await account.createEmailPasswordSession(email, password);
-      // Store session info for cross-domain workaround
+
+      // Create a session immediately after signup
+      const session = await account.createEmailSession(email, password);
+
+      // Store session info locally
       localStorage.setItem(
         "appwrite_session",
         JSON.stringify({
           userId: session.userId,
           sessionId: session.$id,
-          email: email,
+          email,
           name: fullName,
         }),
       );
+
       toast.success("Account created! Welcome to Unified LLM Portal");
       navigate("/dashboard");
     } catch (error: any) {
@@ -86,16 +87,19 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const session = await account.createEmailPasswordSession(email, password);
-      // Store session info for cross-domain workaround
+      // Create a session for existing user
+      const session = await account.createEmailSession(email, password);
+
+      // Store session info locally
       localStorage.setItem(
         "appwrite_session",
         JSON.stringify({
           userId: session.userId,
           sessionId: session.$id,
-          email: email,
+          email,
         }),
       );
+
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error: any) {
