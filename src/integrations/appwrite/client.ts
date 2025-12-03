@@ -3,7 +3,7 @@ import { Client, Databases, Account, Storage, ID } from 'appwrite';
 const client = new Client();
 
 client
-  .setEndpoint('https://appwrite.unified-bi.org:3443/v1')
+  .setEndpoint('https://appwrite.unified-bi.org/v1')
   .setProject('6921fb6b001624e640e3');
 
 export const databases = new Databases(client);
