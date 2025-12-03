@@ -22,9 +22,13 @@ const Auth = () => {
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
-    account.get()
-      .then(() => {
-        navigate("/dashboard");
+    account.getSession('current')
+      .then((session) => {
+        if (session) {
+          navigate("/dashboard");
+        } else {
+          setCheckingSession(false);
+        }
       })
       .catch(() => {
         setCheckingSession(false);
