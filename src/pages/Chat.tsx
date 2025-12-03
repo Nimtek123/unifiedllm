@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, FileText, Upload, AlertCircle } from "lucide-react";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ const Chat = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const settings = response.documents.find((doc: any) => doc.userId === userId);
       
       if (settings?.datasetId && settings?.apiKey) {

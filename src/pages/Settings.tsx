@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { account, databases, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
 import { AlertTriangle, Eye, EyeOff, Save, ArrowLeft, Crown, Mail, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ const Settings = () => {
       const user = await account.get();
       setIsAdmin(user.labels?.includes("admin") || false);
       
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const userSettings = response.documents.find((doc: any) => doc.userId === user.$id);
 
       if (userSettings) {
@@ -99,9 +99,9 @@ const Settings = () => {
       };
 
       if (settingsDocId) {
-        await databases.updateDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, settingsDocId, data);
+        await appwriteDb.updateDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, settingsDocId, data);
       } else {
-        const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), data);
+        const doc = await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), data);
         setSettingsDocId(doc.$id);
       }
 

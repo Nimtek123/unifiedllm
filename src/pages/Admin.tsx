@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { account, databases, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
 import { ArrowLeft, Users, Search, Trash2, Edit2, Save, X, UserPlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -68,7 +68,7 @@ const Admin = () => {
 
   const loadUserSettings = async () => {
     try {
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       setUserSettings(response.documents as unknown as UserSettings[]);
     } catch (error: any) {
       toast.error("Failed to load user settings");
@@ -93,7 +93,7 @@ const Admin = () => {
 
   const handleSaveEdit = async (docId: string, userId: string) => {
     try {
-      await databases.updateDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, docId, {
+      await appwriteDb.updateDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, docId, {
         ...editForm,
         userId,
         updatedAt: new Date().toISOString(),
@@ -111,7 +111,7 @@ const Admin = () => {
     if (!confirm("Are you sure you want to delete this user's settings?")) return;
     
     try {
-      await databases.deleteDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, docId);
+      await appwriteDb.deleteDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, docId);
       toast.success("User settings deleted successfully");
       await loadUserSettings();
     } catch (error: any) {
@@ -126,7 +126,7 @@ const Admin = () => {
     }
 
     try {
-      await databases.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), {
+      await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), {
         userId: newSettingsForm.userId,
         datasetId: newSettingsForm.datasetId,
         apiKey: newSettingsForm.apiKey,
