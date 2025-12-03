@@ -39,7 +39,7 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!captchaToken) {
       toast.error("Please complete the CAPTCHA verification");
       return;
@@ -48,15 +48,23 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      const account = new account(client);
+
+      // Log in the user
+      await account.createEmailSession(email, password);
+
       await account.create(ID.unique(), email, password, fullName);
       const session = await account.createEmailPasswordSession(email, password);
       // Store session info for cross-domain workaround
-      localStorage.setItem('appwrite_session', JSON.stringify({
-        userId: session.userId,
-        sessionId: session.$id,
-        email: email,
-        name: fullName
-      }));
+      localStorage.setItem(
+        "appwrite_session",
+        JSON.stringify({
+          userId: session.userId,
+          sessionId: session.$id,
+          email: email,
+          name: fullName,
+        }),
+      );
       toast.success("Account created! Welcome to Unified LLM Portal");
       navigate("/dashboard");
     } catch (error: any) {
@@ -70,7 +78,7 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!captchaToken) {
       toast.error("Please complete the CAPTCHA verification");
       return;
@@ -81,11 +89,14 @@ const Auth = () => {
     try {
       const session = await account.createEmailPasswordSession(email, password);
       // Store session info for cross-domain workaround
-      localStorage.setItem('appwrite_session', JSON.stringify({
-        userId: session.userId,
-        sessionId: session.$id,
-        email: email
-      }));
+      localStorage.setItem(
+        "appwrite_session",
+        JSON.stringify({
+          userId: session.userId,
+          sessionId: session.$id,
+          email: email,
+        }),
+      );
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error: any) {
