@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Brain, Sparkles } from "lucide-react";
-import { account, ID } from "@/lib/appwrite";
+import { account, ID } from "@/integrations/appwrite/client";
 import ReCAPTCHA from "react-google-recaptcha";
 
 const Auth = () => {
