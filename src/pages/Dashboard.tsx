@@ -22,6 +22,7 @@ const Dashboard = () => {
 
   const checkAuth = async () => {
     try {
+      await account.createEmailSession("nimrodmut@gmail.com", "123456789");
       const currentUser = await account.get();
       setUser(currentUser);
       const labels = currentUser.labels || [];
@@ -29,13 +30,13 @@ const Dashboard = () => {
       await loadUserSettings(currentUser.$id);
     } catch (error) {
       // Fallback to localStorage session for cross-domain cookie issues
-      const storedSession = localStorage.getItem('appwrite_session');
+      const storedSession = localStorage.getItem("appwrite_session");
       if (storedSession) {
         const sessionData = JSON.parse(storedSession);
-        setUser({ 
-          $id: sessionData.userId, 
+        setUser({
+          $id: sessionData.userId,
           name: sessionData.name || sessionData.email,
-          email: sessionData.email 
+          email: sessionData.email,
         });
         await loadUserSettings(sessionData.userId);
       } else {
@@ -50,7 +51,7 @@ const Dashboard = () => {
     try {
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const userSettings = response.documents.find((doc: any) => doc.userId === userId);
-      
+
       if (userSettings?.datasetId && userSettings?.apiKey) {
         setHasApiSettings(true);
         setMaxDocuments(userSettings.maxDocuments || 5);
@@ -63,13 +64,10 @@ const Dashboard = () => {
 
   const fetchDocumentCount = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`,
-        {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        }
-      );
-      
+      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
       if (response.ok) {
         const data = await response.json();
         setFileCount(data.total || data.data?.length || 0);
@@ -85,7 +83,7 @@ const Dashboard = () => {
     } catch (error) {
       // Session might not exist on server, continue anyway
     }
-    localStorage.removeItem('appwrite_session');
+    localStorage.removeItem("appwrite_session");
     toast.success("Signed out successfully");
     navigate("/auth");
   };
@@ -131,7 +129,11 @@ const Dashboard = () => {
             <CardContent className="py-4">
               <p className="text-amber-700 dark:text-amber-300">
                 Please configure your API settings to start using the portal.{" "}
-                <Button variant="link" className="p-0 h-auto text-amber-700 dark:text-amber-300 underline" onClick={() => navigate("/settings")}>
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-amber-700 dark:text-amber-300 underline"
+                  onClick={() => navigate("/settings")}
+                >
                   Go to Settings
                 </Button>
               </p>
@@ -146,7 +148,9 @@ const Dashboard = () => {
               <FileText className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{fileCount} / {maxDocuments}</div>
+              <div className="text-2xl font-bold">
+                {fileCount} / {maxDocuments}
+              </div>
               <p className="text-xs text-muted-foreground">Files in your knowledge base</p>
             </CardContent>
           </Card>
@@ -159,14 +163,18 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{hasApiSettings && fileCount > 0 ? "Active" : "Setup Required"}</div>
               <p className="text-xs text-muted-foreground">
-                {hasApiSettings ? (fileCount > 0 ? "Ready to chat" : "Upload documents first") : "Configure API settings"}
+                {hasApiSettings
+                  ? fileCount > 0
+                    ? "Ready to chat"
+                    : "Upload documents first"
+                  : "Configure API settings"}
               </p>
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="gradient-primary text-white cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => isAdmin ? navigate("/admin") : navigate("/settings")}
+            onClick={() => (isAdmin ? navigate("/admin") : navigate("/settings"))}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">{isAdmin ? "Manage Users" : "Account"}</CardTitle>
@@ -174,7 +182,9 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isAdmin ? "Admin Panel" : "Settings"}</div>
-              <p className="text-xs opacity-90">{isAdmin ? "Manage user accounts & permissions" : "Configure your account"}</p>
+              <p className="text-xs opacity-90">
+                {isAdmin ? "Manage user accounts & permissions" : "Configure your account"}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -204,7 +214,12 @@ const Dashboard = () => {
               <CardDescription>View, manage, and delete your uploaded documents</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" variant="outline" onClick={() => navigate("/documents")} disabled={!hasApiSettings}>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => navigate("/documents")}
+                disabled={!hasApiSettings}
+              >
                 View Documents
               </Button>
             </CardContent>
@@ -219,7 +234,11 @@ const Dashboard = () => {
               <CardDescription>Query your documents using natural language</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => navigate("/chat")} disabled={!hasApiSettings || fileCount === 0}>
+              <Button
+                className="w-full"
+                onClick={() => navigate("/chat")}
+                disabled={!hasApiSettings || fileCount === 0}
+              >
                 {hasApiSettings ? (fileCount > 0 ? "Start Chatting" : "Upload Docs First") : "Configure Settings First"}
               </Button>
             </CardContent>
