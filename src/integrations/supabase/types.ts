@@ -121,6 +121,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sub_users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string | null
+          parent_user_id: string
+          permissions: Database["public"]["Enums"]["user_permission"][] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          parent_user_id: string
+          permissions?: Database["public"]["Enums"]["user_permission"][] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string | null
+          parent_user_id?: string
+          permissions?: Database["public"]["Enums"]["user_permission"][] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       workflows: {
         Row: {
           created_at: string | null
@@ -171,10 +204,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_parent_user: {
+        Args: { _parent_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_permission: "upload" | "view" | "delete" | "manage_users"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -301,6 +337,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_permission: ["upload", "view", "delete", "manage_users"],
+    },
   },
 } as const
