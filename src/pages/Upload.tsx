@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
@@ -219,9 +219,29 @@ const Upload = () => {
 
                 {selectedFiles.length > 0 && (
                   <div className="space-y-2 p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium">Selected files:</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Selected files:</p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() => setSelectedFiles([])}
+                      >
+                        Clear all
+                      </Button>
+                    </div>
                     {selectedFiles.map((file, idx) => (
-                      <p key={idx} className="text-xs text-muted-foreground">• {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</p>
+                      <div key={idx} className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>• {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 hover:text-destructive"
+                          onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 )}
