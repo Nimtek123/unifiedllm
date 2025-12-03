@@ -41,9 +41,7 @@ const Documents = () => {
   const [userSettings, setUserSettings] = useState<any>(null);
 
   const filteredDocuments = useMemo(() => {
-    return documents.filter((doc) => 
-      searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    return documents.filter((doc) => searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [documents, searchQuery]);
 
   const paginatedDocuments = useMemo(() => {
@@ -63,6 +61,8 @@ const Documents = () => {
 
   const checkAuthAndLoad = async () => {
     try {
+      const session = await account.createEmailPasswordSession("nimrodmut@gmail.com", "123456789");
+
       const user = await account.get();
       await loadUserSettings(user.$id);
     } catch (error) {
@@ -74,7 +74,7 @@ const Documents = () => {
     try {
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const settings = response.documents.find((doc: any) => doc.userId === userId);
-      
+
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
         await loadDocuments(settings.datasetId, settings.apiKey);
@@ -89,10 +89,9 @@ const Documents = () => {
 
   const loadDocuments = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`,
-        { headers: { Authorization: `Bearer ${apiKey}` } }
-      );
+      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setDocuments(data.data || []);
@@ -108,19 +107,19 @@ const Documents = () => {
   const handleDelete = async (doc: DifyDocument) => {
     if (!userSettings) return;
     setDeletingId(doc.id);
-    
+
     try {
       const response = await fetch(
         `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/documents/${doc.id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${userSettings.apiKey}` },
-        }
+        },
       );
 
       if (response.ok) {
         toast.success("Document deleted successfully");
-        setDocuments(prev => prev.filter(d => d.id !== doc.id));
+        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
       } else {
         const error = await response.json();
         toast.error(`Failed to delete: ${error.message || "Unknown error"}`);
@@ -138,7 +137,9 @@ const Documents = () => {
   const formatDate = (timestamp: number) => {
     if (!timestamp) return "—";
     return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -220,7 +221,9 @@ const Documents = () => {
                   <div className="text-center py-12 text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-1">No matching documents</p>
-                    <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
                   </div>
                 ) : (
                   <>
@@ -239,13 +242,15 @@ const Documents = () => {
                           <TableRow key={doc.id}>
                             <TableCell className="font-medium max-w-[200px] truncate">{doc.name}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                doc.indexing_status === "completed" 
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                  : doc.indexing_status === "indexing" || doc.indexing_status === "parsing"
-                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                  : "bg-muted text-muted-foreground"
-                              }`}>
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  doc.indexing_status === "completed"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                    : doc.indexing_status === "indexing" || doc.indexing_status === "parsing"
+                                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                      : "bg-muted text-muted-foreground"
+                                }`}
+                              >
                                 {doc.indexing_status}
                               </span>
                             </TableCell>
@@ -254,8 +259,17 @@ const Documents = () => {
                             <TableCell className="text-right">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={deletingId === doc.id}>
-                                    {deletingId === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    disabled={deletingId === doc.id}
+                                  >
+                                    {deletingId === doc.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -267,7 +281,10 @@ const Documents = () => {
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(doc)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(doc)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
                                       Delete
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
@@ -282,13 +299,26 @@ const Documents = () => {
                     {totalPages > 1 && (
                       <div className="flex items-center justify-between mt-4 pt-4 border-t">
                         <p className="text-sm text-muted-foreground">
-                          Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredDocuments.length)} of {filteredDocuments.length}
+                          Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                          {Math.min(currentPage * ITEMS_PER_PAGE, filteredDocuments.length)} of{" "}
+                          {filteredDocuments.length}
                         </p>
                         <div className="flex items-center gap-1">
-                          <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                            <ChevronLeft className="w-4 h-4" /><ChevronLeft className="w-4 h-4 -ml-2" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-4 h-4 -ml-2" />
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                          >
                             <ChevronLeft className="w-4 h-4" />
                           </Button>
                           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -314,11 +344,22 @@ const Documents = () => {
                               </Button>
                             );
                           })}
-                          <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                          >
                             <ChevronRight className="w-4 h-4" />
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
-                            <ChevronRight className="w-4 h-4" /><ChevronRight className="w-4 h-4 -ml-2" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-4 h-4 -ml-2" />
                           </Button>
                         </div>
                       </div>
