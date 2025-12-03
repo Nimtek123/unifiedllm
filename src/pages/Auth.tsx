@@ -22,18 +22,10 @@ const Auth = () => {
   const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
-    account.getSession('current')
-      .then((session) => {
-        if (session) {
-          navigate("/dashboard");
-        } else {
-          setCheckingSession(false);
-        }
-      })
-      .catch(() => {
-        setCheckingSession(false);
-      });
-  }, [navigate]);
+    // Skip session check in preview due to cross-domain cookie limitations
+    // Users will need to login each time in the preview environment
+    setCheckingSession(false);
+  }, []);
 
   if (checkingSession) {
     return (
@@ -57,7 +49,14 @@ const Auth = () => {
 
     try {
       await account.create(ID.unique(), email, password, fullName);
-      await account.createEmailPasswordSession(email, password);
+      const session = await account.createEmailPasswordSession(email, password);
+      // Store session info for cross-domain workaround
+      localStorage.setItem('appwrite_session', JSON.stringify({
+        userId: session.userId,
+        sessionId: session.$id,
+        email: email,
+        name: fullName
+      }));
       toast.success("Account created! Welcome to Unified LLM Portal");
       navigate("/dashboard");
     } catch (error: any) {
@@ -80,7 +79,13 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      await account.createEmailPasswordSession(email, password);
+      const session = await account.createEmailPasswordSession(email, password);
+      // Store session info for cross-domain workaround
+      localStorage.setItem('appwrite_session', JSON.stringify({
+        userId: session.userId,
+        sessionId: session.$id,
+        email: email
+      }));
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error: any) {

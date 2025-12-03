@@ -28,7 +28,19 @@ const Dashboard = () => {
       setIsAdmin(labels.includes("admin"));
       await loadUserSettings(currentUser.$id);
     } catch (error) {
-      navigate("/auth");
+      // Fallback to localStorage session for cross-domain cookie issues
+      const storedSession = localStorage.getItem('appwrite_session');
+      if (storedSession) {
+        const sessionData = JSON.parse(storedSession);
+        setUser({ 
+          $id: sessionData.userId, 
+          name: sessionData.name || sessionData.email,
+          email: sessionData.email 
+        });
+        await loadUserSettings(sessionData.userId);
+      } else {
+        navigate("/auth");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -70,11 +82,12 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     try {
       await account.deleteSession("current");
-      toast.success("Signed out successfully");
-      navigate("/auth");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      // Session might not exist on server, continue anyway
     }
+    localStorage.removeItem('appwrite_session');
+    toast.success("Signed out successfully");
+    navigate("/auth");
   };
 
   if (isLoading) {
