@@ -27,7 +27,7 @@ const Settings = () => {
       const user = await account.get();
       const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const userSettings = response.documents.find((doc: any) => doc.userId === user.$id);
-      
+
       if (userSettings) {
         setDatasetId(userSettings.datasetId || "");
         setApiKey(userSettings.apiKey || "");
@@ -52,7 +52,7 @@ const Settings = () => {
     setSaving(true);
     try {
       const user = await account.get();
-      
+
       const data = {
         userId: user.$id,
         datasetId: datasetId.trim(),
@@ -110,7 +110,7 @@ const Settings = () => {
               <Alert className="border-amber-500/50 bg-amber-500/10">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-700 dark:text-amber-300">
-                  To prevent API abuse, protect your API Key. Avoid using it as plain text in front-end code. :)
+                  To prevent API abuse, protect your API Key.
                 </AlertDescription>
               </Alert>
 
