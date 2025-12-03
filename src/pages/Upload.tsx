@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Upload = () => {
@@ -18,6 +19,7 @@ const Upload = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [userSettings, setUserSettings] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [maxDocuments, setMaxDocuments] = useState(5);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -39,6 +41,7 @@ const Upload = () => {
       
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
+        setMaxDocuments(settings.maxDocuments || 5);
         await loadDocuments(settings.datasetId, settings.apiKey);
       } else {
         setIsLoading(false);
@@ -52,7 +55,7 @@ const Upload = () => {
   const loadDocuments = async (datasetId: string, apiKey: string) => {
     try {
       const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=20`,
+        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`,
         { headers: { Authorization: `Bearer ${apiKey}` } }
       );
       if (response.ok) {
@@ -109,6 +112,17 @@ const Upload = () => {
       return;
     }
 
+    // Check document limit
+    const totalAfterUpload = documents.length + selectedFiles.length;
+    if (totalAfterUpload > maxDocuments) {
+      const remaining = maxDocuments - documents.length;
+      toast.error(
+        `Document limit exceeded! You can upload ${remaining > 0 ? remaining : 0} more file(s). ` +
+        `Current: ${documents.length}/${maxDocuments}. Please upgrade your account for more uploads.`
+      );
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
     let successCount = 0;
@@ -153,6 +167,9 @@ const Upload = () => {
     }
   };
 
+  const remainingUploads = maxDocuments - documents.length;
+  const canUpload = remainingUploads > 0;
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -174,8 +191,22 @@ const Upload = () => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
-          <h2 className="text-3xl font-bold mb-2">Upload Documents</h2>
-          <p className="text-muted-foreground">Add files to your private knowledge base</p>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Upload Documents</h2>
+              <p className="text-muted-foreground">Add files to your private knowledge base</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={canUpload ? "default" : "destructive"}>
+                {documents.length} / {maxDocuments} documents
+              </Badge>
+              {!canUpload && (
+                <Button variant="outline" size="sm" onClick={() => navigate("/settings")}>
+                  Upgrade Account
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {!userSettings ? (
@@ -192,81 +223,103 @@ const Upload = () => {
             <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
               <CardHeader>
                 <CardTitle>Upload New Files</CardTitle>
-                <CardDescription>Supported formats: PDF, DOCX, TXT (Max 20MB)</CardDescription>
+                <CardDescription>
+                  Supported formats: PDF, DOCX, TXT (Max 20MB) • {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached"}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div 
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                    isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary'
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                >
-                  <UploadIcon className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <div className="space-y-4">
-                    <p className="text-sm font-medium mb-1">Drop your files here or click to browse</p>
-                    <p className="text-xs text-muted-foreground">Files will be processed and added to your knowledge base</p>
-                    <input type="file" id="file-upload" className="hidden" accept=".pdf,.docx,.txt" multiple onChange={handleFileSelect} disabled={isUploading} />
-                    <label htmlFor="file-upload">
-                      <Button asChild variant="outline" disabled={isUploading}>
-                        <span>Select Files</span>
-                      </Button>
-                    </label>
+                {!canUpload ? (
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center border-destructive/50 bg-destructive/5">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
+                    <p className="text-sm font-medium mb-1 text-destructive">Upload Limit Reached</p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      You've reached your document limit of {maxDocuments} files.
+                    </p>
+                    <Button variant="outline" onClick={() => navigate("/settings")}>
+                      Upgrade Account
+                    </Button>
                   </div>
-                </div>
-
-                {selectedFiles.length > 0 && (
-                  <div className="space-y-2 p-3 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Selected files:</p>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => setSelectedFiles([])}
-                      >
-                        Clear all
-                      </Button>
-                    </div>
-                    {selectedFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>• {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 hover:text-destructive"
-                          onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                ) : (
+                  <>
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                        isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary'
+                      }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                    >
+                      <UploadIcon className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div className="space-y-4">
+                        <p className="text-sm font-medium mb-1">Drop your files here or click to browse</p>
+                        <p className="text-xs text-muted-foreground">Files will be processed and added to your knowledge base</p>
+                        <input type="file" id="file-upload" className="hidden" accept=".pdf,.docx,.txt" multiple onChange={handleFileSelect} disabled={isUploading} />
+                        <label htmlFor="file-upload">
+                          <Button asChild variant="outline" disabled={isUploading}>
+                            <span>Select Files</span>
+                          </Button>
+                        </label>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+
+                    {selectedFiles.length > 0 && (
+                      <div className="space-y-2 p-3 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">Selected files:</p>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 text-xs text-muted-foreground hover:text-destructive"
+                            onClick={() => setSelectedFiles([])}
+                          >
+                            Clear all
+                          </Button>
+                        </div>
+                        {selectedFiles.map((file, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>• {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 hover:text-destructive"
+                              onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                        {selectedFiles.length > remainingUploads && (
+                          <p className="text-xs text-destructive">
+                            Warning: You've selected more files than your remaining upload limit ({remainingUploads})
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Indexing Technique</label>
+                      <Select value={indexingTechnique} onValueChange={setIndexingTechnique}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="high_quality">High Quality</SelectItem>
+                          <SelectItem value="economy">Economy</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {uploadProgress > 0 && (
+                      <div className="space-y-2">
+                        <Progress value={uploadProgress} />
+                        <p className="text-xs text-center text-muted-foreground">{uploadProgress}%</p>
+                      </div>
+                    )}
+
+                    <Button className="w-full" onClick={handleUpload} disabled={isUploading || selectedFiles.length === 0}>
+                      {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : "Upload All Files"}
+                    </Button>
+                  </>
                 )}
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Indexing Technique</label>
-                  <Select value={indexingTechnique} onValueChange={setIndexingTechnique}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high_quality">High Quality</SelectItem>
-                      <SelectItem value="economy">Economy</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {uploadProgress > 0 && (
-                  <div className="space-y-2">
-                    <Progress value={uploadProgress} />
-                    <p className="text-xs text-center text-muted-foreground">{uploadProgress}%</p>
-                  </div>
-                )}
-
-                <Button className="w-full" onClick={handleUpload} disabled={isUploading || selectedFiles.length === 0}>
-                  {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : "Upload All Files"}
-                </Button>
               </CardContent>
             </Card>
 
