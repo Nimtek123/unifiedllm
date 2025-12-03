@@ -117,7 +117,7 @@ const Chat = () => {
             <Card className="flex-1 overflow-hidden">
               <CardContent className="p-0 h-full">
                 <iframe
-                  src="http://dify.unified-bi.org:8088/chatbot/LejUgszGK0FV7PVK"
+                  src="https://dify.unified-bi.org/chat/LejUgszGK0FV7PVK"
                   style={{ width: "100%", height: "100%", minHeight: "700px" }}
                   frameBorder="0"
                   allow="microphone"
