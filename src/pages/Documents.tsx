@@ -61,8 +61,6 @@ const Documents = () => {
 
   const checkAuthAndLoad = async () => {
     try {
-      const session = await account.createEmailPasswordSession("nimrodmut@gmail.com", "123456789");
-
       const user = await account.get();
       await loadUserSettings(user.$id);
     } catch (error) {
