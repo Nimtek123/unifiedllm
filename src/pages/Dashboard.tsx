@@ -22,7 +22,6 @@ const Dashboard = () => {
 
   const checkAuth = async () => {
     try {
-      await account.createEmailSession("nimrodmut@gmail.com", "123456789");
       const currentUser = await account.get();
       setUser(currentUser);
       const labels = currentUser.labels || [];
