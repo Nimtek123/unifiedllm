@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 import SubUserManagement from "@/components/SubUserManagement";
 
 const Dashboard = () => {
@@ -48,7 +48,7 @@ const Dashboard = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const userSettings = response.documents.find((doc: any) => doc.userId === userId);
       
       if (userSettings?.datasetId && userSettings?.apiKey) {

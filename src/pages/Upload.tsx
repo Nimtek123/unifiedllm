@@ -7,7 +7,7 @@ import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X } from "
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const Upload = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const settings = response.documents.find((doc: any) => doc.userId === userId);
       
       if (settings?.datasetId && settings?.apiKey) {
