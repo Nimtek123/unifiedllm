@@ -186,6 +186,7 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>User ID</TableHead>
                     <TableHead>Dataset ID</TableHead>
+                    <TableHead>API Key</TableHead>
                     <TableHead>Account Type</TableHead>
                     <TableHead>Max Documents</TableHead>
                     <TableHead>Updated</TableHead>
@@ -214,7 +215,20 @@ const Admin = () => {
                             />
                           ) : (
                             <span className="font-mono text-xs">
-                              {settings.datasetId.substring(0, 12)}...
+                              {settings.datasetId ? `${settings.datasetId.substring(0, 12)}...` : "-"}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingId === settings.$id ? (
+                            <Input
+                              value={editForm.apiKey || ""}
+                              onChange={(e) => setEditForm({ ...editForm, apiKey: e.target.value })}
+                              className="h-8"
+                            />
+                          ) : (
+                            <span className="font-mono text-xs">
+                              {settings.apiKey ? `****${settings.apiKey.slice(-4)}` : "-"}
                             </span>
                           )}
                         </TableCell>

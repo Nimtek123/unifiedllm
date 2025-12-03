@@ -148,16 +148,37 @@ const Settings = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Account Type</span>
-                <Badge variant={accountType === "free" ? "secondary" : "default"}>
-                  {accountType.charAt(0).toUpperCase() + accountType.slice(1)}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Document Limit</span>
-                <span className="font-medium">{maxDocuments} documents</span>
-              </div>
+              {datasetId && apiKey ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Account Type</span>
+                    <Badge variant={accountType === "free" ? "secondary" : "default"}>
+                      {accountType.charAt(0).toUpperCase() + accountType.slice(1)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Document Limit</span>
+                    <span className="font-medium">{maxDocuments} documents</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground mb-4">No API keys configured yet.</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const subject = encodeURIComponent("Request Free API Keys");
+                      const body = encodeURIComponent(
+                        "I would like to request free API keys for the Unified LLM Portal.\n\nPlease provide me with:\n- Dataset ID\n- API Key"
+                      );
+                      window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Request Free Keys
+                  </Button>
+                </div>
+              )}
               {isAdmin && (
                 <Button variant="outline" className="w-full" onClick={() => navigate("/admin")}>
                   <Shield className="h-4 w-4 mr-2" />
@@ -206,7 +227,8 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* API Configuration Card */}
+          {/* API Configuration Card - Admin Only */}
+          {isAdmin && (
           <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Dify Configuration</CardTitle>
@@ -261,6 +283,7 @@ const Settings = () => {
               </Button>
             </CardContent>
           </Card>
+          )}
         </div>
       </main>
     </div>
