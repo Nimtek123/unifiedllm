@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ const Upload = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [userSettings, setUserSettings] = useState<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -71,6 +72,36 @@ const Upload = () => {
       setSelectedFiles(Array.from(files));
     }
   };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const validFiles = Array.from(files).filter(file => 
+        file.name.endsWith('.pdf') || file.name.endsWith('.docx') || file.name.endsWith('.txt')
+      );
+      if (validFiles.length > 0) {
+        setSelectedFiles(validFiles);
+      } else {
+        toast.error("Please drop PDF, DOCX, or TXT files only");
+      }
+    }
+  }, []);
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0 || !userSettings) {
@@ -164,8 +195,16 @@ const Upload = () => {
                 <CardDescription>Supported formats: PDF, DOCX, TXT (Max 20MB)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors">
-                  <UploadIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                    isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  <UploadIcon className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
                   <div className="space-y-4">
                     <p className="text-sm font-medium mb-1">Drop your files here or click to browse</p>
                     <p className="text-xs text-muted-foreground">Files will be processed and added to your knowledge base</p>
