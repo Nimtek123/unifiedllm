@@ -11,7 +11,7 @@ export const databases = new Databases(client);
 
 export const DATABASE_ID = '692f6e880008c421e414';
 export const COLLECTIONS = {
-  USER_SETTINGS: 'unified_llm', // Will store datasetID, apiKey, plan
+  USER_SETTINGS: 'user_settings',
 };
 
 export { ID };
