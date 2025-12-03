@@ -51,7 +51,6 @@ const Auth = () => {
       const account = new account(client);
 
       // Log in the user
-      await account.createEmailSession(email, password);
 
       await account.create(ID.unique(), email, password, fullName);
       const session = await account.createEmailPasswordSession(email, password);
