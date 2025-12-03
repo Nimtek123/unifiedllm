@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
 import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import SubUserManagement from "@/components/SubUserManagement";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -210,6 +211,11 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Team Management Section */}
+        <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+          <SubUserManagement />
         </div>
       </main>
     </div>
