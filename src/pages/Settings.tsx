@@ -43,6 +43,20 @@ const Settings = () => {
     }
   };
 
+  const verifyCredentials = async (datasetId: string, apiKey: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     if (!datasetId.trim() || !apiKey.trim()) {
       toast.error("Please fill in both Dataset ID and API Key");
@@ -51,6 +65,14 @@ const Settings = () => {
 
     setSaving(true);
     try {
+      // Verify credentials before saving
+      const isValid = await verifyCredentials(datasetId.trim(), apiKey.trim());
+      if (!isValid) {
+        toast.error("Invalid credentials. Please check your Dataset ID and API Key.");
+        setSaving(false);
+        return;
+      }
+
       const user = await account.get();
 
       const data = {
