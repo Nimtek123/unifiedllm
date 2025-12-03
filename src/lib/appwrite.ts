@@ -9,7 +9,7 @@ client
 export const account = new Account(client);
 export const databases = new Databases(client);
 
-export const DATABASE_ID = 'unified_llm';
+export const DATABASE_ID = '692f6e880008c421e414';
 export const COLLECTIONS = {
   USER_SETTINGS: 'user_settings',
 };
