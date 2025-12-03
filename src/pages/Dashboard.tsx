@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings } from "lucide-react";
+import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
 import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
@@ -12,6 +12,8 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [fileCount, setFileCount] = useState(0);
   const [hasApiSettings, setHasApiSettings] = useState(false);
+  const [maxDocuments, setMaxDocuments] = useState(5);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -21,6 +23,8 @@ const Dashboard = () => {
     try {
       const currentUser = await account.get();
       setUser(currentUser);
+      const labels = currentUser.labels || [];
+      setIsAdmin(labels.includes("admin"));
       await loadUserSettings(currentUser.$id);
     } catch (error) {
       navigate("/auth");
@@ -36,6 +40,7 @@ const Dashboard = () => {
       
       if (userSettings?.datasetId && userSettings?.apiKey) {
         setHasApiSettings(true);
+        setMaxDocuments(userSettings.maxDocuments || 5);
         await fetchDocumentCount(userSettings.datasetId, userSettings.apiKey);
       }
     } catch (error) {
@@ -46,7 +51,7 @@ const Dashboard = () => {
   const fetchDocumentCount = async (datasetId: string, apiKey: string) => {
     try {
       const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=20`,
+        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`,
         {
           headers: { Authorization: `Bearer ${apiKey}` },
         }
@@ -127,7 +132,7 @@ const Dashboard = () => {
               <FileText className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{fileCount}</div>
+              <div className="text-2xl font-bold">{fileCount} / {maxDocuments}</div>
               <p className="text-xs text-muted-foreground">Files in your knowledge base</p>
             </CardContent>
           </Card>
@@ -145,14 +150,17 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="gradient-primary text-white">
+          <Card 
+            className="gradient-primary text-white cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => isAdmin ? navigate("/admin") : navigate("/settings")}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-              <Upload className="w-4 h-4" />
+              <CardTitle className="text-sm font-medium">{isAdmin ? "Manage Users" : "Account"}</CardTitle>
+              <Users className="w-4 h-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Get Started</div>
-              <p className="text-xs opacity-90">Upload files or start chatting</p>
+              <div className="text-2xl font-bold">{isAdmin ? "Admin Panel" : "Settings"}</div>
+              <p className="text-xs opacity-90">{isAdmin ? "Manage user accounts & permissions" : "Configure your account"}</p>
             </CardContent>
           </Card>
         </div>
