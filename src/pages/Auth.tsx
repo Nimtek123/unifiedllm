@@ -15,16 +15,18 @@ const Auth = () => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
-    // Check if user already has an active session
     account.get()
       .then(() => {
-        // User is already logged in, redirect to dashboard
         navigate("/dashboard");
       })
       .catch(() => {
-        // No active session, show login form
         setCheckingSession(false);
       });
   }, [navigate]);
@@ -36,11 +38,6 @@ const Auth = () => {
       </div>
     );
   }
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const selectedPlan = location.state?.selectedPlan;
 
