@@ -52,7 +52,7 @@ const Auth = () => {
       await account.create(ID.unique(), email, password, fullName);
 
       // Create a session immediately after signup
-      const session = await account.createEmailSession(email, password);
+      const session = await account.createEmailPasswordSession(email, password);
 
       // Store session info locally
       localStorage.setItem(
@@ -88,7 +88,7 @@ const Auth = () => {
 
     try {
       // Create a session for existing user
-      const session = await account.createEmailSession(email, password);
+      const session = await account.createEmailPasswordSession(email, password);
 
       // Store session info locally
       localStorage.setItem(
