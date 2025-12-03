@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2, Trash2, FileText, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite";
+import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 import {
   AlertDialog,
   AlertDialogAction,

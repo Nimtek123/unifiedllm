@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, FileText, Upload, AlertCircle } from "lucide-react";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite";
+import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Chat = () => {
   const navigate = useNavigate();

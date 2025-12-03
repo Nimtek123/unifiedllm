@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings } from "lucide-react";
 import { toast } from "sonner";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite";
+import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();

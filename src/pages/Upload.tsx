@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
-import { account, databases, DATABASE_ID, COLLECTIONS } from "@/lib/appwrite";
+import { account, databases, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Upload = () => {
   const navigate = useNavigate();
