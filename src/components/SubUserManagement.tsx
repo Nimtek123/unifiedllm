@@ -310,7 +310,6 @@ const SubUserManagement = () => {
             <TableRow>
               <TableHead>Email</TableHead>
               <TableHead>Permissions</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
