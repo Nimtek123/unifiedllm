@@ -20,6 +20,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const projectId = "6921fb6b001624e640e3";
 
   useEffect(() => {
     // Skip session check in preview due to cross-domain cookie limitations
