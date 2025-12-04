@@ -199,7 +199,7 @@ const Upload = () => {
   };
 
   const remainingUploads = maxDocuments - documents.length;
-  const canUpload = remainingUploads > 0 && userPermissions.can_upload;
+  const canUpload = remainingUploads > 0;
 
   if (isLoading) {
     return (
