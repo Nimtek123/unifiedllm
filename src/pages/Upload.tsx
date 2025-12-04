@@ -22,6 +22,12 @@ const Upload = () => {
   const [maxDocuments, setMaxDocuments] = useState(5);
 
   let subUser = false;
+  let userPermissions = {
+    can_view: true,
+    can_upload: false,
+    can_delete: false,
+    can_manage_users: false,
+  };
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -47,12 +53,19 @@ const Upload = () => {
         const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
         subUser = true;
+        userPermissions = {
+          can_view: subUserDoc.can_view ?? false,
+          can_upload: subUserDoc.can_upload ?? false,
+          can_delete: subUserDoc.can_delete ?? false,
+          can_manage_users: subUserDoc.can_manage_users ?? false,
+        };
       }
 
       // Load settings for the effective user
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
         Query.equal("userId", effectiveUserId),
       ]);
+      console.log(response);
 
       const settings = response.documents.find((doc: any) => doc.userId === userId);
 
@@ -187,7 +200,7 @@ const Upload = () => {
   };
 
   const remainingUploads = maxDocuments - documents.length;
-  const canUpload = remainingUploads > 0;
+  const canUpload = remainingUploads > 0 && userPermissions.can_upload;
 
   if (isLoading) {
     return (
