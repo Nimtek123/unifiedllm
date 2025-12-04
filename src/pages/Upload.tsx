@@ -261,14 +261,18 @@ const Upload = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!canUpload ? (
+                {!canUpload || !userPermissions.can_upload ? (
                   <div className="border-2 border-dashed rounded-lg p-8 text-center border-destructive/50 bg-destructive/5">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-                    <p className="text-sm font-medium mb-1 text-destructive">Upload Limit Reached</p>
-                    <p className="text-sm font-medium mb-1 text-destructive">
-                      {" "}
-                      {userPermissions.can_upload ? `` : "No permissions to upload"}
-                    </p>
+                    {!canUpload ? (
+                      <p className="text-sm font-medium mb-1 text-destructive">
+                        {canUpload ? `` : "Upload Limit Reached"}
+                      </p>
+                    ) : (
+                      <p className="text-sm font-medium mb-1 text-destructive">
+                        {userPermissions.can_upload ? `` : "No permissions to upload"}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground mb-4">
                       You've reached your document limit of {maxDocuments} files.
                     </p>
