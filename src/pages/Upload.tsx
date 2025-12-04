@@ -257,7 +257,7 @@ const Upload = () => {
                 <CardTitle>Upload New Files</CardTitle>
                 <CardDescription>
                   Supported formats: PDF, DOCX, TXT (Max 20MB) •{" "}
-                  {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached"}
+                  {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached..."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
