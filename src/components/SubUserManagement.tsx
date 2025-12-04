@@ -56,6 +56,8 @@ const SubUserManagement = () => {
   const [editForm, setEditForm] = useState({
     name: "",
     password: "",
+    email: "",
+    name: "",
     permissions: {
       can_view: true,
       can_upload: false,
