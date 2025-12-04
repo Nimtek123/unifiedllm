@@ -90,6 +90,7 @@ const Auth = () => {
     try {
       // Create a session for existing user
       const session = await account.createEmailPasswordSession(email, password);
+      const encodedPassword = btoa(password);
 
       // Store session info locally
       localStorage.setItem(
@@ -98,6 +99,7 @@ const Auth = () => {
           userId: session.userId,
           sessionId: session.$id,
           email,
+          encodedPassword,
         }),
       );
       // Set the session cookie domain manually if needed
