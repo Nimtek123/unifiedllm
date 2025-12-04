@@ -80,9 +80,6 @@ const Chat = () => {
     }
   };
 
-  document.getElementById("dify-chat").src =
-    `https://dify.unified-bi.org/chat/LejUgszGK0FV7PVK?conversation_id=${user.$id}`;
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
