@@ -11,7 +11,7 @@ import { account, ID } from "@/integrations/appwrite/client";
 import ReCAPTCHA from "react-google-recaptcha";
 
 // Get ReCAPTCHA site key from environment or show warning if not configured
-const RECAPTCHA_SITE_KEY = "6Le_5SAsAAAAAL6H-H4nXMtkTom-uwFAApacMUOe"; //import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const Auth = () => {
   const navigate = useNavigate();
