@@ -59,8 +59,6 @@ const Upload = () => {
           can_delete: subUserDoc.can_delete ?? false,
           can_manage_users: subUserDoc.can_manage_users ?? false,
         };
-
-        console.log(userPermissions);
       }
 
       // Load settings for the effective user
@@ -263,7 +261,7 @@ const Upload = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!canUpload || !userPermissions.can_upload ? (
+                {!canUpload && !userPermissions.can_upload ? (
                   <div className="border-2 border-dashed rounded-lg p-8 text-center border-destructive/50 bg-destructive/5">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
                     {/* Case 1 — User has NO upload permissions */}
