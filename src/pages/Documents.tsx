@@ -296,7 +296,7 @@ const Documents = () => {
                                     <AlertDialogAction
                                       onClick={() => handleDelete(doc)}
                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      disabled={isSubUser} // disable delete for sub-users
+                                      disabled={subUser} // disable delete for sub-users
                                     >
                                       Delete
                                     </AlertDialogAction>
