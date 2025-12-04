@@ -1,5 +1,4 @@
-import { Client, Account, ID } from 'appwrite';
-import { supabase } from '@/integrations/supabase/client';
+import { Client, Databases, Account, Storage, ID } from 'appwrite';
 
 const client = new Client();
 
@@ -7,102 +6,72 @@ client
   .setEndpoint('https://appwrite.unified-bi.org/v1')
   .setProject('6921fb6b001624e640e3');
 
+export const databases = new Databases(client);
 export const account = new Account(client);
+export const storage = new Storage(client);
 
 export const DATABASE_ID = '692f6e880008c421e414';
 export const COLLECTIONS = {
   USER_SETTINGS: 'user_settings',
 };
 
-// Secure API calls through edge function proxy
+// API Key for server-side operations (used when session cookies don't work)
+const API_KEY = 'standard_43965d6c2e1ace9d44e489216b4eca0ffd78f700375a3aa6ad0763b94cc83858028132896b809e9b8b2a9439f8980577efcd303c7f4c58a340031832a3cca7d8f8a73f79ed6633805fe9c7c76a09dd6314f454493e57df5323cdec022aaf52860452a7dee7c82220f00983485a7dd0a124fee83f4434892105be8f3080579824';
+
+const APPWRITE_ENDPOINT = 'https://appwrite.unified-bi.org/v1';
+const PROJECT_ID = '6921fb6b001624e640e3';
+
+// Helper function to make authenticated API requests
+export const appwriteFetch = async (path: string, options: RequestInit = {}) => {
+  const response = await fetch(`${APPWRITE_ENDPOINT}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Appwrite-Project': PROJECT_ID,
+      'X-Appwrite-Key': API_KEY,
+      ...options.headers,
+    },
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Appwrite request failed');
+  }
+  
+  return response.json();
+};
+
+// Database helpers using API key
 export const appwriteDb = {
   listDocuments: async (databaseId: string, collectionId: string) => {
-    const { data, error } = await supabase.functions.invoke('appwrite-proxy', {
-      body: { action: 'listDocuments', collectionId },
-    });
-    if (error) throw new Error(error.message);
-    return data;
+    return appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents`);
   },
   
   getDocument: async (databaseId: string, collectionId: string, documentId: string) => {
-    const { data, error } = await supabase.functions.invoke('appwrite-proxy', {
-      body: { action: 'getDocument', collectionId, documentId },
-    });
-    if (error) throw new Error(error.message);
-    return data;
+    return appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents/${documentId}`);
   },
   
   createDocument: async (databaseId: string, collectionId: string, documentId: string, data: any) => {
-    const { data: result, error } = await supabase.functions.invoke('appwrite-proxy', {
-      body: { action: 'createDocument', collectionId, documentId, data },
+    return appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents`, {
+      method: 'POST',
+      body: JSON.stringify({
+        documentId,
+        data,
+      }),
     });
-    if (error) throw new Error(error.message);
-    return result;
   },
   
   updateDocument: async (databaseId: string, collectionId: string, documentId: string, data: any) => {
-    const { data: result, error } = await supabase.functions.invoke('appwrite-proxy', {
-      body: { action: 'updateDocument', collectionId, documentId, data },
+    return appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents/${documentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ data }),
     });
-    if (error) throw new Error(error.message);
-    return result;
   },
   
   deleteDocument: async (databaseId: string, collectionId: string, documentId: string) => {
-    const { data, error } = await supabase.functions.invoke('appwrite-proxy', {
-      body: { action: 'deleteDocument', collectionId, documentId },
+    return appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents/${documentId}`, {
+      method: 'DELETE',
     });
-    if (error) throw new Error(error.message);
-    return data;
-  },
-};
-
-// Secure Dify API calls through edge function proxy
-export const difyApi = {
-  listDocuments: async (userId: string) => {
-    const { data, error } = await supabase.functions.invoke('dify-proxy', {
-      body: { action: 'listDocuments', userId },
-    });
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  deleteDocument: async (userId: string, documentId: string) => {
-    const { data, error } = await supabase.functions.invoke('dify-proxy', {
-      body: { action: 'deleteDocument', userId, documentId },
-    });
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  uploadDocument: async (userId: string, file: File, indexingTechnique: string = 'high_quality') => {
-    const formData = new FormData();
-    formData.append('action', 'uploadDocument');
-    formData.append('userId', userId);
-    formData.append('file', file);
-    formData.append('indexingTechnique', indexingTechnique);
-
-    const { data, error } = await supabase.functions.invoke('dify-proxy', {
-      body: formData,
-    });
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  checkDocuments: async (userId: string) => {
-    const { data, error } = await supabase.functions.invoke('dify-proxy', {
-      body: { action: 'checkDocuments', userId },
-    });
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  getSettings: async (userId: string) => {
-    const { data, error } = await supabase.functions.invoke('dify-proxy', {
-      body: { action: 'getSettings', userId },
-    });
-    if (error) throw new Error(error.message);
-    return data;
   },
 };
 

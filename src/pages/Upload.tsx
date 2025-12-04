@@ -7,7 +7,7 @@ import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X } from "
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { account, difyApi } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -17,8 +17,7 @@ const Upload = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [hasSettings, setHasSettings] = useState(false);
+  const [userSettings, setUserSettings] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [maxDocuments, setMaxDocuments] = useState(5);
 
@@ -29,25 +28,42 @@ const Upload = () => {
   const checkAuthAndLoad = async () => {
     try {
       const user = await account.get();
-      setUserId(user.$id);
-      await loadDocuments(user.$id);
+      await loadUserSettings(user.$id);
     } catch (error) {
       navigate("/auth");
     }
   };
 
-  const loadDocuments = async (uid: string) => {
+  const loadUserSettings = async (userId: string) => {
     try {
-      const result = await difyApi.listDocuments(uid);
-      setDocuments(result.data || []);
-      setMaxDocuments(result.maxDocuments || 5);
-      setHasSettings(true);
-    } catch (error: any) {
-      if (error.message?.includes('not configured')) {
-        setHasSettings(false);
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      const settings = response.documents.find((doc: any) => doc.userId === userId);
+      
+      if (settings?.datasetId && settings?.apiKey) {
+        setUserSettings(settings);
+        setMaxDocuments(settings.maxDocuments || 5);
+        await loadDocuments(settings.datasetId, settings.apiKey);
       } else {
-        console.error("Error loading documents:", error);
+        setIsLoading(false);
       }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      setIsLoading(false);
+    }
+  };
+
+  const loadDocuments = async (datasetId: string, apiKey: string) => {
+    try {
+      const response = await fetch(
+        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`,
+        { headers: { Authorization: `Bearer ${apiKey}` } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading documents:", error);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +107,7 @@ const Upload = () => {
   }, []);
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0 || !userId) {
+    if (selectedFiles.length === 0 || !userSettings) {
       toast.error("Please select files to upload");
       return;
     }
@@ -113,18 +129,31 @@ const Upload = () => {
 
     try {
       for (const file of selectedFiles) {
-        try {
-          await difyApi.uploadDocument(userId, file, indexingTechnique);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("data", JSON.stringify({
+          indexing_technique: indexingTechnique,
+          process_rule: { mode: "automatic" }
+        }));
+
+        const response = await fetch(
+          `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/document/create_by_file`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${userSettings.apiKey}` },
+            body: formData,
+          }
+        );
+
+        if (response.ok) {
           successCount++;
-        } catch (error) {
-          console.error(`Failed to upload ${file.name}:`, error);
         }
         setUploadProgress(Math.round((successCount / selectedFiles.length) * 100));
       }
 
       if (successCount > 0) {
         toast.success(`Success! ${successCount} of ${selectedFiles.length} files uploaded.`);
-        await loadDocuments(userId);
+        await loadDocuments(userSettings.datasetId, userSettings.apiKey);
         setSelectedFiles([]);
       } else {
         toast.error("No files were uploaded successfully");
@@ -180,7 +209,7 @@ const Upload = () => {
           </div>
         </div>
 
-        {!hasSettings ? (
+        {!userSettings ? (
           <Card className="max-w-lg mx-auto animate-slide-up">
             <CardContent className="py-12 text-center">
               <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
