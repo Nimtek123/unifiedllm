@@ -74,7 +74,7 @@ const Documents = () => {
       let subUser = false;
 
       // Check if logged-in user is a sub-user
-      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal(userId", userId)]);
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
 
       if (teamRes.documents.length > 0) {
         effectiveUserId = teamRes.documents[0].parentUserId;
