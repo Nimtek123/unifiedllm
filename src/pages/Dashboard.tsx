@@ -107,17 +107,7 @@ const Dashboard = () => {
       setFileCount(result.total || result.data?.length || 0);
       setMaxDocuments(result.maxDocuments || 5);
       setHasApiSettings(true);
-      let effectiveUserId = userId;
-      // Check if logged-in user is a sub-user
-      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
-      if (teamRes.documents.length > 0) {
-        setUserPermissions({
-          can_view: subUserDoc.can_view,
-          can_upload: subUserDoc.can_upload,
-          can_delete: subUserDoc.can_delete,
-          can_manage_users: subUserDoc.can_manage_users,
-        });
-      }
+      // Sub-user permissions are handled elsewhere if needed
     } catch (error: any) {
       if (error.message?.includes("not configured")) {
         setHasApiSettings(false);
@@ -398,10 +388,10 @@ const Dashboard = () => {
         </Card> */}
 
         {/* Team Management Section */}
-        {userPermissions.can_manage_users(
+        {userPermissions.can_manage_users && (
           <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
             <SubUserManagement />
-          </div>,
+          </div>
         )}
       </main>
     </div>
