@@ -73,6 +73,43 @@ const Dashboard = () => {
     navigate("/auth");
   };
 
+  const sendPing = async () => {
+    if (status === "loading") return;
+    setStatus("loading");
+    try {
+      const result = await client.ping();
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/ping",
+        status: 200,
+        response: JSON.stringify(result),
+      };
+      setLogs((prevLogs) => [log, ...prevLogs]);
+      setStatus("success");
+      toast({
+        title: "Ping Successful",
+        description: "Server is online and responding",
+      });
+    } catch (err) {
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/ping",
+        status: err instanceof AppwriteException ? err.code : 500,
+        response: err instanceof AppwriteException ? err.message : "Something went wrong",
+      };
+      setLogs((prevLogs) => [log, ...prevLogs]);
+      setStatus("error");
+      toast({
+        title: "Ping Failed",
+        description: log.response,
+        variant: "destructive",
+      });
+    }
+    setShowLogs(true);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
