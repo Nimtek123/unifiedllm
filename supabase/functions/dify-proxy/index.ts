@@ -27,13 +27,23 @@ interface TeamMember {
   can_delete?: boolean;
 }
 
+// Helper to build Appwrite query URL
+function buildQueryUrl(collectionId: string, attribute: string, value: string): string {
+  const query = JSON.stringify({
+    method: "equal",
+    attribute: attribute,
+    values: [value]
+  });
+  return `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${collectionId}/documents?queries[]=${encodeURIComponent(query)}`;
+}
+
 // Check if user is a sub-user and get their parent's ID
 async function getParentUserId(userId: string): Promise<string | null> {
   try {
     console.log(`Checking if user ${userId} is a sub-user...`);
     
-    // Query team_members where userId matches
-    const queryUrl = `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${TEAM_MEMBERS_COLLECTION}/documents?queries[]=${encodeURIComponent(`equal("userId","${userId}")`)}`;
+    const queryUrl = buildQueryUrl(TEAM_MEMBERS_COLLECTION, "userId", userId);
+    console.log(`Query URL: ${queryUrl}`);
     
     const response = await fetch(queryUrl, {
       headers: {
@@ -44,11 +54,13 @@ async function getParentUserId(userId: string): Promise<string | null> {
     });
 
     if (!response.ok) {
-      console.error("Failed to check team_members:", await response.text());
+      const errorText = await response.text();
+      console.error("Failed to check team_members:", errorText);
       return null;
     }
 
     const data = await response.json();
+    console.log(`team_members query returned ${data.documents?.length || 0} documents`);
     
     if (data.documents && data.documents.length > 0) {
       const teamMember = data.documents[0] as TeamMember;
@@ -69,8 +81,8 @@ async function getUserSettings(userId: string): Promise<UserSettings | null> {
   try {
     console.log(`Fetching user settings for userId: ${userId}`);
     
-    // Query for documents where userId matches
-    const queryUrl = `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${USER_SETTINGS_COLLECTION}/documents?queries[]=${encodeURIComponent(`equal("userId","${userId}")`)}`;
+    const queryUrl = buildQueryUrl(USER_SETTINGS_COLLECTION, "userId", userId);
+    console.log(`Query URL: ${queryUrl}`);
     
     const response = await fetch(queryUrl, {
       headers: {
@@ -81,15 +93,17 @@ async function getUserSettings(userId: string): Promise<UserSettings | null> {
     });
 
     if (!response.ok) {
-      console.error("Failed to fetch user settings:", await response.text());
+      const errorText = await response.text();
+      console.error("Failed to fetch user settings:", errorText);
       return null;
     }
 
     const data = await response.json();
-    console.log(`Found ${data.documents?.length || 0} user settings documents`);
+    console.log(`user_settings query returned ${data.documents?.length || 0} documents`);
     
     if (data.documents && data.documents.length > 0) {
       const settings = data.documents[0];
+      console.log(`Found settings with datasetId: ${settings.datasetId ? 'yes' : 'no'}, apiKey: ${settings.apiKey ? 'yes' : 'no'}`);
       return {
         datasetId: settings.datasetId,
         apiKey: settings.apiKey,
@@ -116,7 +130,7 @@ async function getCredentials(userId: string): Promise<UserSettings | null> {
   }
   
   // User is not a sub-user, fetch their own credentials
-  console.log(`Fetching credentials for user: ${userId}`);
+  console.log(`User is not a sub-user, fetching own credentials for: ${userId}`);
   return getUserSettings(userId);
 }
 
