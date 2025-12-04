@@ -200,7 +200,7 @@ const Upload = () => {
   };
 
   const remainingUploads = maxDocuments - documents.length;
-  const canUpload = remainingUploads > 0 && userPermissions.can_upload;
+  const canUpload = remainingUploads > 0;
 
   if (isLoading) {
     return (
@@ -257,7 +257,7 @@ const Upload = () => {
                 <CardTitle>Upload New Files</CardTitle>
                 <CardDescription>
                   Supported formats: PDF, DOCX, TXT (Max 20MB) •{" "}
-                  {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached..."}
+                  {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -265,13 +265,9 @@ const Upload = () => {
                   <div className="border-2 border-dashed rounded-lg p-8 text-center border-destructive/50 bg-destructive/5">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
                     {!canUpload ? (
-                      <p className="text-sm font-medium mb-1 text-destructive">
-                        {canUpload ? `` : "Upload Limit Reached"}
-                      </p>
+                      <p className="text-sm font-medium mb-1 text-destructive">Upload Limit Reached</p>
                     ) : (
-                      <p className="text-sm font-medium mb-1 text-destructive">
-                        {userPermissions.can_upload ? `` : "No permissions to upload"}
-                      </p>
+                      <p className="text-sm font-medium mb-1 text-destructive">No permissions to upload</p>
                     )}
                     <p className="text-xs text-muted-foreground mb-4">
                       You've reached your document limit of {maxDocuments} files.
