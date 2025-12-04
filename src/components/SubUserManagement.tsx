@@ -33,10 +33,22 @@ const SubUserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState<{ email: string; name: string; password: string; permissions: PermissionType[] }>({ 
-    email: "", name: "", permissions: ["view"] 
+  const [newUser, setNewUser] = useState<{
+    email: string;
+    name: string;
+    password: string;
+    permissions: PermissionType[];
+  }>({
+    email: "",
+    name: "",
+    permissions: ["view"],
   });
-  const [editForm, setEditForm] = useState<{ name: string; password: string; permissions: PermissionType[]; is_active: boolean }>({
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    password: string;
+    permissions: PermissionType[];
+    is_active: boolean;
+  }>({
     name: "",
     permissions: [],
     is_active: true,
@@ -48,10 +60,7 @@ const SubUserManagement = () => {
 
   const loadSubUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from("sub_users")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("sub_users").select("*").order("created_at", { ascending: false });
 
       if (error) throw error;
       setSubUsers(data || []);
@@ -70,17 +79,16 @@ const SubUserManagement = () => {
     }
 
     try {
-
       let uniqueID = ID.unique();
       const storedSession = localStorage.getItem("appwrite_session");
-       // Create a new user
+      // Create a new user
       await account.create(uniqueID, newUser.email, newUser.password, newUser.name);
-      
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
       const { error } = await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), {
-        parentUserId: userData.user.id
+        parentUserId: userData.user.id,
         userId: uniqueID,
         view: newUser.permissions["view"],
         upload: newUser.permissions["upload"],
@@ -88,8 +96,7 @@ const SubUserManagement = () => {
         manage_users: newUser.permissions["manage_users"],
         updatedAt: new Date().toISOString(),
       });
-      
-      
+
       if (error) throw error;
       toast.success("Team member added successfully");
       setShowAddForm(false);
@@ -142,7 +149,11 @@ const SubUserManagement = () => {
     }
   };
 
-  const togglePermission = (permission: PermissionType, current: PermissionType[], setter: (perms: PermissionType[]) => void) => {
+  const togglePermission = (
+    permission: PermissionType,
+    current: PermissionType[],
+    setter: (perms: PermissionType[]) => void,
+  ) => {
     if (current.includes(permission)) {
       setter(current.filter((p) => p !== permission));
     } else {
@@ -207,7 +218,7 @@ const SubUserManagement = () => {
                       checked={newUser.permissions.includes(perm.value)}
                       onCheckedChange={() =>
                         togglePermission(perm.value, newUser.permissions, (perms) =>
-                          setNewUser({ ...newUser, permissions: perms })
+                          setNewUser({ ...newUser, permissions: perms }),
                         )
                       }
                     />
@@ -267,7 +278,7 @@ const SubUserManagement = () => {
                                 checked={editForm.permissions.includes(perm.value)}
                                 onCheckedChange={() =>
                                   togglePermission(perm.value, editForm.permissions, (perms) =>
-                                    setEditForm({ ...editForm, permissions: perms })
+                                    setEditForm({ ...editForm, permissions: perms }),
                                   )
                                 }
                               />
@@ -290,9 +301,7 @@ const SubUserManagement = () => {
                         <label className="flex items-center gap-2 text-sm">
                           <Checkbox
                             checked={editForm.is_active}
-                            onCheckedChange={(checked) =>
-                              setEditForm({ ...editForm, is_active: checked as boolean })
-                            }
+                            onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked as boolean })}
                           />
                           Active
                         </label>
