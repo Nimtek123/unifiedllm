@@ -242,7 +242,7 @@ const SubUserManagement = () => {
     if (user) {
       // Editing existing user
       setEditingId(user.$id);
-      setNewUser({
+      setEditForm({
         email: user.email || "",
         name: user.name || "",
         password: "", // Leave blank; only update if user sets new password
