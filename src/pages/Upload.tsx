@@ -260,7 +260,7 @@ const Upload = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!canUpload || !userPermissions.can_upload ? (
+                {subUser && (!canUpload || !userPermissions.can_upload) ? (
                   <div className="border-2 border-dashed rounded-lg p-8 text-center border-destructive/50 bg-destructive/5">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
                     {/* Case 1 — User has NO upload permissions */}
