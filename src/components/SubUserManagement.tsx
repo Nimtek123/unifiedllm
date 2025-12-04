@@ -110,7 +110,7 @@ const SubUserManagement = () => {
         Query.equal("parentUserId", currentUserId),
       ]);
 
-      const users = await Promise.all(members.documents.map((link) => account.get(member.userId)));
+      const users = await Promise.all(members.documents.map((link) => account.get(link.userId)));
 
       const subUsers = members.documents.map((link, idx) => ({
         ...link,
