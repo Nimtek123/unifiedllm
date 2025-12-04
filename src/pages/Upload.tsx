@@ -258,6 +258,7 @@ const Upload = () => {
                 <CardDescription>
                   Supported formats: PDF, DOCX, TXT (Max 20MB) •{" "}
                   {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached"}
+                  {userPermissions.can_upload ? `` : "No permissions to upload"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
