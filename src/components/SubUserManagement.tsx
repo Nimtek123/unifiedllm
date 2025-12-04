@@ -199,15 +199,12 @@ const SubUserManagement = () => {
 
         if (newUser.password && newUser.password.trim() !== "") {
           payload.password = newUser.password;
+          await account.updatePassword(newName);
         }
 
         if (newUser.name && newUser.name.trim() !== "") {
           payload.name = newUser.name;
-        }
-
-        if (Object.keys(payload).length > 0) {
-          // Uses Admin SDK to update any user
-          await account.update(authUserId, payload);
+          await account.updateName(newName);
         }
       }
 
@@ -291,6 +288,7 @@ const SubUserManagement = () => {
                 placeholder="Email"
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                readOnly={!!editingId} // make readonly if editing
               />
               <Input
                 placeholder="Name"
