@@ -53,19 +53,6 @@ const SubUserManagement = () => {
     },
   });
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    password: "",
-    email: "",
-    name: "",
-    permissions: {
-      can_view: true,
-      can_upload: false,
-      can_delete: false,
-      can_manage_users: false,
-    },
-  });
-
   const togglePermission = (key: keyof typeof newUser.permissions, isEdit = false) => {
     if (isEdit) {
       setNewUser((f) => ({
@@ -166,7 +153,7 @@ const SubUserManagement = () => {
   // Edit
   const handleEdit = (user: SubUser) => {
     setEditingId(user.$id);
-    setEditForm({
+    newUser({
       name: user.name || "",
       email: user.email || "",
       permissions: {
@@ -202,21 +189,20 @@ const SubUserManagement = () => {
         can_upload: canUpload,
         can_delete: canDelete,
         can_manage_users: canManageUsers,
-        email: editForm.email,
+        email: newUser.email,
         name: newUser.name,
       });
 
-      console.log(editForm);
       // 2️⃣ Update Auth user if password or name is changed
-      if (editForm.password || editForm.name) {
+      if (newUser.password || newUser.name) {
         const payload: any = {};
 
-        if (editForm.password && editForm.password.trim() !== "") {
-          payload.password = editForm.password;
+        if (newUser.password && newUser.password.trim() !== "") {
+          payload.password = newUser.password;
         }
 
-        if (editForm.name && editForm.name.trim() !== "") {
-          payload.name = editForm.name;
+        if (newUser.name && newUser.name.trim() !== "") {
+          payload.name = newUser.name;
         }
 
         if (Object.keys(payload).length > 0) {
@@ -226,6 +212,8 @@ const SubUserManagement = () => {
       }
 
       toast.success("Team member updated");
+      setShowAddForm(false);
+      setNewUser({ email: "", name: "", password: "", permissions: ["view"] });
 
       setEditingId(null);
       loadSubUsers();
