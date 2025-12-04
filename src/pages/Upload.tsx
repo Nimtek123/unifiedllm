@@ -20,14 +20,13 @@ const Upload = () => {
   const [userSettings, setUserSettings] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [maxDocuments, setMaxDocuments] = useState(5);
-
-  let subUser = false;
-  let userPermissions = {
+  const [userPermissions, setUserPermissions] = useState({
     can_view: true,
     can_upload: false,
     can_delete: false,
     can_manage_users: false,
-  };
+  });
+  let subUser = false;
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -53,10 +52,12 @@ const Upload = () => {
         const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
         subUser = true;
-        userPermissions.can_view = subUserDoc.can_view;
-        userPermissions.can_upload = subUserDoc.can_upload;
-        userPermissions.can_delete = subUserDoc.can_delete;
-        userPermissions.can_manage_users = subUserDoc.can_manage_users;
+        setUserPermissions({
+          can_view: subUserDoc.can_view,
+          can_upload: subUserDoc.can_upload,
+          can_delete: subUserDoc.can_delete,
+          can_manage_users: subUserDoc.can_manage_users,
+        });
       }
 
       // Load settings for the effective user
