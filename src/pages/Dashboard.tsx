@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users, Activity } from "lucide-react";
 import { toast } from "sonner";
-import { account, difyApi, client, appwriteDb } from "@/integrations/appwrite/client";
+import { account, difyApi, client, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
 import SubUserManagement from "@/components/SubUserManagement";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
