@@ -69,10 +69,10 @@ const Upload = () => {
       const settings = response.documents.find((doc: any) => doc.userId === userId);
 
       if (settings?.datasetId && settings?.apiKey) {
+        console.log(userSettings);
         setUserSettings(settings);
         setMaxDocuments(settings.maxDocuments || 5);
 
-        console.log(userSettings);
         await loadDocuments(settings.datasetId, settings.apiKey);
       } else {
         setIsLoading(false);
