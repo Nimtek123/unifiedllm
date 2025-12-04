@@ -202,7 +202,7 @@ const Upload = () => {
   const remainingUploads = maxDocuments - documents.length;
   const canUpload = remainingUploads > 0;
 
-  console.log(canUpload, userPermissions.can_upload);
+  console.log(canUpload, userPermissions);
 
   if (isLoading) {
     return (
