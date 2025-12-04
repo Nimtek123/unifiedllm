@@ -183,10 +183,10 @@ const SubUserManagement = () => {
   // Save Edit
   const handleSaveEdit = async (id: string) => {
     try {
-      // Get the linked sub-user record (to know authUserId)
+      // Get the linked sub-user record (to know userId)
       const link = await databases.getDocument(DATABASE_ID, USER_LINKS, id);
 
-      const authUserId = link.authUserId;
+      const authUserId = link.userId;
       if (!authUserId) {
         throw new Error("authUserId not found for this sub-user");
       }
