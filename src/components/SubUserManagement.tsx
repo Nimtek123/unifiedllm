@@ -41,10 +41,8 @@ const SubUserManagement = () => {
     name: "",
     password: "",
     permissions: {
-      can_view: true,
-      can_upload: false,
-      can_delete: false,
-      can_manage_users: false,
+      ...u.permissions,
+      [key]: !u.permissions[key],
     },
   });
 
