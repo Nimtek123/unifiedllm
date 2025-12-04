@@ -37,15 +37,35 @@ const Settings = () => {
       const user = await account.get();
       setIsAdmin(user.labels?.includes("admin") || false);
 
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
-      const userSettings = response.documents.find((doc: any) => doc.userId === user.$id);
+      let userIdToUse = user.$id;
 
-      if (userSettings) {
+      // Check if this user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", user.$id)]);
+
+      if (teamRes.documents.length > 0) {
+        // Use the parent user's ID for settings
+        userIdToUse = teamRes.documents[0].parentUserId;
+      }
+
+      // Load settings using the resolved userId
+      const settingsRes = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
+        Query.equal("userId", userIdToUse),
+      ]);
+
+      if (settingsRes.documents.length > 0) {
+        const userSettings = settingsRes.documents[0];
         setDatasetId(userSettings.datasetId || "");
         setApiKey(userSettings.apiKey || "");
         setSettingsDocId(userSettings.$id);
         setAccountType(userSettings.accountType || "free");
         setMaxDocuments(userSettings.maxDocuments || 5);
+      } else {
+        // No settings found
+        setDatasetId("");
+        setApiKey("");
+        setSettingsDocId("");
+        setAccountType("free");
+        setMaxDocuments(5);
       }
     } catch (error: any) {
       if (error.code === 401) {
@@ -231,7 +251,9 @@ const Settings = () => {
           <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>API Configuration</CardTitle>
-              <CardDescription>Enter your Dataset ID and API Key from Dify to connect your knowledge base.</CardDescription>
+              <CardDescription>
+                Enter your Dataset ID and API Key from Dify to connect your knowledge base.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <Alert className="border-amber-500/50 bg-amber-500/10">
