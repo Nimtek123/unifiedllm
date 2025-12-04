@@ -108,6 +108,22 @@ const Dashboard = () => {
       setMaxDocuments(result.maxDocuments || 5);
       setHasApiSettings(true);
       // Sub-user permissions are handled elsewhere if needed
+      let effectiveUserId = userId;
+
+      // Check if logged-in user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
+
+      if (teamRes.documents.length > 0) {
+        const subUserDoc = teamRes.documents[0];
+        effectiveUserId = teamRes.documents[0].parentUserId;
+        subUser = true;
+        setUserPermissions({
+          can_view: subUserDoc.can_view,
+          can_upload: subUserDoc.can_upload,
+          can_delete: subUserDoc.can_delete,
+          can_manage_users: subUserDoc.can_manage_users,
+        });
+      }
     } catch (error: any) {
       if (error.message?.includes("not configured")) {
         setHasApiSettings(false);
