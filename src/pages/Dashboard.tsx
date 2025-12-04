@@ -64,8 +64,8 @@ const Dashboard = () => {
 
           // Restore the session properly
           if (sessionData.sessionSecret) {
-            // Re-create the session cookie
-            document.cookie = `a_session_${YOUR_PROJECT_ID}=${sessionData.sessionSecret}; path=/; domain=.unified-bi.org; max-age=${60 * 60 * 24 * 30}; samesite=none; secure`;
+                  // Re-create the session cookie
+                  document.cookie = `a_session_6921fb6b001624e640e3=${sessionData.sessionSecret}; path=/; domain=.unified-bi.org; max-age=${60 * 60 * 24 * 30}; samesite=none; secure`;
           }
 
           // Retry account.get() with new session

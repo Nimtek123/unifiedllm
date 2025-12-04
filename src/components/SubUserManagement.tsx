@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { UserPlus, Trash2, Edit2, Save, X, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Query, account, databases, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
+import { Query, account, databases, DATABASE_ID, ID } from "@/integrations/appwrite/client";
 
 type PermissionType = "view" | "upload" | "delete" | "manage_users";
 
@@ -22,15 +22,12 @@ interface SubUser {
   $id: string;
   userId: string;
   parentUserId: string;
-  permissions: {
-    can_view: boolean;
-    can_upload: boolean;
-    can_delete: boolean;
-    can_manage_users: boolean;
-  };
+  can_view: boolean;
+  can_upload: boolean;
+  can_delete: boolean;
+  can_manage_users: boolean;
   email?: string;
   name?: string;
-  password?: string;
 }
 
 const USER_LINKS = "team_members";
@@ -52,26 +49,6 @@ const SubUserManagement = () => {
       can_manage_users: false,
     },
   });
-
-  const togglePermission = (key: keyof typeof newUser.permissions, isEdit = false) => {
-    if (isEdit) {
-      setNewUser((f) => ({
-        ...f,
-        permissions: {
-          ...f.permissions,
-          [key]: !f.permissions[key],
-        },
-      }));
-    } else {
-      setNewUser((u) => ({
-        ...u,
-        permissions: {
-          ...u.permissions,
-          [key]: !u.permissions[key],
-        },
-      }));
-    }
-  };
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -99,7 +76,7 @@ const SubUserManagement = () => {
         Query.equal("parentUserId", currentUserId),
       ]);
 
-      setSubUsers(members.documents);
+      setSubUsers(members.documents as unknown as SubUser[]);
     } catch (error: any) {
       toast.error("Failed to load team members");
       console.error(error);
@@ -131,8 +108,6 @@ const SubUserManagement = () => {
         userId: userId,
         email: newUser.email,
         name: newUser.name,
-
-        // Boolean permission fields
         can_view: canView,
         can_upload: canUpload,
         can_delete: canDelete,
@@ -141,29 +116,23 @@ const SubUserManagement = () => {
 
       toast.success("Team member added successfully");
       setShowAddForm(false);
-      setNewUser({ email: "", name: "", password: "", permissions: ["view"] });
+      setNewUser({
+        email: "",
+        name: "",
+        password: "",
+        permissions: {
+          can_view: true,
+          can_upload: false,
+          can_delete: false,
+          can_manage_users: false,
+        },
+      });
 
       loadSubUsers();
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Failed to add sub user");
     }
-  };
-
-  // Edit
-  const handleEdit = (user: SubUser) => {
-    setEditingId(user.$id);
-    newUser({
-      name: user.name || "",
-      email: user.email || "",
-      permissions: {
-        can_view: user.can_view || false,
-        can_upload: user.can_upload || false,
-        can_delete: user.can_delete || false,
-        can_manage_users: user.can_manage_users || false,
-      },
-      password: "", // Leave blank; only update if changed
-    });
   };
 
   // Save Edit
@@ -182,9 +151,8 @@ const SubUserManagement = () => {
       const canDelete = newUser.permissions.can_delete;
       const canManageUsers = newUser.permissions.can_manage_users;
 
-      // 1️⃣ Update USER_LINKS (permissions + is_active)
+      // Update USER_LINKS (permissions)
       await databases.updateDocument(DATABASE_ID, USER_LINKS, id, {
-        // Boolean permission fields
         can_view: canView,
         can_upload: canUpload,
         can_delete: canDelete,
@@ -193,24 +161,19 @@ const SubUserManagement = () => {
         name: newUser.name,
       });
 
-      // 2️⃣ Update Auth user if password or name is changed
-      // if (newUser.password || newUser.name) {
-      //   const payload: any = {};
-
-      //   if (newUser.password && newUser.password.trim() !== "") {
-      //     payload.password = newUser.password;
-      //     await account.updatePassword(newUser.password);
-      //   }
-
-      //   if (newUser.name && newUser.name.trim() !== "") {
-      //     payload.name = newUser.name;
-      //     await account.updateName(newUser.name);
-      //   }
-      // }
-
       toast.success("Team member updated");
       setShowAddForm(false);
-      setNewUser({ email: "", name: "", password: "", permissions: ["view"] });
+      setNewUser({
+        email: "",
+        name: "",
+        password: "",
+        permissions: {
+          can_view: true,
+          can_upload: false,
+          can_delete: false,
+          can_manage_users: false,
+        },
+      });
 
       setEditingId(null);
       loadSubUsers();
@@ -226,7 +189,6 @@ const SubUserManagement = () => {
 
     try {
       await databases.deleteDocument(DATABASE_ID, USER_LINKS, id);
-
       toast.success("Deleted");
       loadSubUsers();
     } catch (error: any) {
@@ -242,7 +204,7 @@ const SubUserManagement = () => {
       setNewUser({
         email: user.email || "",
         name: user.name || "",
-        password: "", // Leave blank; only update if user sets new password
+        password: "",
         permissions: {
           can_view: user.can_view || false,
           can_upload: user.can_upload || false,
@@ -282,13 +244,13 @@ const SubUserManagement = () => {
         {/* Add User Form */}
         {showAddForm && (
           <div className="mb-6 p-4 border rounded-xl bg-muted/20">
-            <h3 className="font-medium mb-2">Add Team Member</h3>
+            <h3 className="font-medium mb-2">{editingId ? "Edit Team Member" : "Add Team Member"}</h3>
             <div className="grid gap-3">
               <Input
                 placeholder="Email"
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                readOnly={!!editingId} // make readonly if editing
+                readOnly={!!editingId}
                 disabled={!!editingId}
               />
               <Input
@@ -296,14 +258,14 @@ const SubUserManagement = () => {
                 value={newUser.name}
                 onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
               />
-              <Input
-                placeholder="Password"
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                readOnly={!!editingId} // make readonly if editing
-                disabled={!!editingId}
-              />
+              {!editingId && (
+                <Input
+                  placeholder="Password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                />
+              )}
 
               <div>
                 <label className="font-medium">Permissions:</label>
@@ -362,33 +324,40 @@ const SubUserManagement = () => {
                 </div>
               </div>
 
-              <Button
-                onClick={async () => {
-                  if (editingId) {
-                    await handleSaveEdit(editingId);
-                  } else {
-                    await handleAddUser();
-                  }
-                }}
-              >
-                {editingId ? (
-                  <>
-                    <Save className="mr-2 h-4 w-4" /> Save Changes
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="mr-2 h-4 w-4" /> Add User
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={async () => {
+                    if (editingId) {
+                      await handleSaveEdit(editingId);
+                    } else {
+                      await handleAddUser();
+                    }
+                  }}
+                >
+                  {editingId ? (
+                    <>
+                      <Save className="mr-2 h-4 w-4" /> Save Changes
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" /> Add User
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                  <X className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Table */}
-        <Button className="mb-4" onClick={() => openForm()}>
-          <UserPlus className="mr-2 h-4 w-4" /> Add Sub User
-        </Button>
+        {!showAddForm && (
+          <Button className="mb-4" onClick={() => openForm()}>
+            <UserPlus className="mr-2 h-4 w-4" /> Add Sub User
+          </Button>
+        )}
 
         <Table>
           <TableHeader>
