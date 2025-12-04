@@ -29,6 +29,12 @@ const Dashboard = () => {
   const [pingStatus, setPingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [pingLogs, setPingLogs] = useState<PingLog[]>([]);
   const [showLogs, setShowLogs] = useState(false);
+  const [userPermissions, setUserPermissions] = useState({
+    can_view: true,
+    can_upload: false,
+    can_delete: false,
+    can_manage_users: false,
+  });
 
   useEffect(() => {
     checkAuth();
@@ -64,8 +70,8 @@ const Dashboard = () => {
 
           // Restore the session properly
           if (sessionData.sessionSecret) {
-                  // Re-create the session cookie
-                  document.cookie = `a_session_6921fb6b001624e640e3=${sessionData.sessionSecret}; path=/; domain=.unified-bi.org; max-age=${60 * 60 * 24 * 30}; samesite=none; secure`;
+            // Re-create the session cookie
+            document.cookie = `a_session_6921fb6b001624e640e3=${sessionData.sessionSecret}; path=/; domain=.unified-bi.org; max-age=${60 * 60 * 24 * 30}; samesite=none; secure`;
           }
 
           // Retry account.get() with new session
@@ -101,6 +107,17 @@ const Dashboard = () => {
       setFileCount(result.total || result.data?.length || 0);
       setMaxDocuments(result.maxDocuments || 5);
       setHasApiSettings(true);
+      let effectiveUserId = userId;
+      // Check if logged-in user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
+      if (teamRes.documents.length > 0) {
+        setUserPermissions({
+          can_view: subUserDoc.can_view,
+          can_upload: subUserDoc.can_upload,
+          can_delete: subUserDoc.can_delete,
+          can_manage_users: subUserDoc.can_manage_users,
+        });
+      }
     } catch (error: any) {
       if (error.message?.includes("not configured")) {
         setHasApiSettings(false);
@@ -381,9 +398,11 @@ const Dashboard = () => {
         </Card> */}
 
         {/* Team Management Section */}
-        <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
-          <SubUserManagement />
-        </div>
+        {userPermissions.can_manage_users(
+          <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
+            <SubUserManagement />
+          </div>,
+        )}
       </main>
     </div>
   );
