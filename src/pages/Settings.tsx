@@ -36,7 +36,7 @@ const Settings = () => {
     try {
       const user = await account.get();
       setIsAdmin(user.labels?.includes("admin") || false);
-      
+
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
       const userSettings = response.documents.find((doc: any) => doc.userId === user.$id);
 
@@ -60,9 +60,9 @@ const Settings = () => {
   const verifyCredentials = async (datasetId: string, apiKey: string): Promise<boolean> => {
     try {
       const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       });
       return response.ok;
@@ -111,6 +111,43 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const sendPing = async () => {
+    if (status === "loading") return;
+    setStatus("loading");
+    try {
+      const result = await client.ping();
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/ping",
+        status: 200,
+        response: JSON.stringify(result),
+      };
+      setLogs((prevLogs) => [log, ...prevLogs]);
+      setStatus("success");
+      toast({
+        title: "Ping Successful",
+        description: "Server is online and responding",
+      });
+    } catch (err) {
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/ping",
+        status: err instanceof AppwriteException ? err.code : 500,
+        response: err instanceof AppwriteException ? err.message : "Something went wrong",
+      };
+      setLogs((prevLogs) => [log, ...prevLogs]);
+      setStatus("error");
+      toast({
+        title: "Ping Failed",
+        description: log.response,
+        variant: "destructive",
+      });
+    }
+    setShowLogs(true);
   };
 
   if (loading) {
@@ -169,7 +206,7 @@ const Settings = () => {
                     onClick={() => {
                       const subject = encodeURIComponent("Request Free API Keys");
                       const body = encodeURIComponent(
-                        "I would like to request free API keys for the Unified LLM Portal.\n\nPlease provide me with:\n- Dataset ID\n- API Key"
+                        "I would like to request free API keys for the Unified LLM Portal.\n\nPlease provide me with:\n- Dataset ID\n- API Key",
                       );
                       window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
                     }}
@@ -213,7 +250,7 @@ const Settings = () => {
                       onClick={() => {
                         const subject = encodeURIComponent(`Upgrade Request: ${plan.name}`);
                         const body = encodeURIComponent(
-                          `I would like to upgrade to ${plan.name} plan.\n\nDataset ID: ${datasetId || "Not set"}\nAPI Key: ${apiKey ? "****" + apiKey.slice(-4) : "Not set"}`
+                          `I would like to upgrade to ${plan.name} plan.\n\nDataset ID: ${datasetId || "Not set"}\nAPI Key: ${apiKey ? "****" + apiKey.slice(-4) : "Not set"}`,
                         );
                         window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
                       }}
@@ -229,61 +266,130 @@ const Settings = () => {
 
           {/* API Configuration Card - Admin Only */}
           {isAdmin && (
-          <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <CardHeader>
-              <CardTitle>Dify Configuration</CardTitle>
-              <CardDescription>Enter your Dataset ID and API Key from Dify.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Alert className="border-amber-500/50 bg-amber-500/10">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-700 dark:text-amber-300">
-                  To prevent API abuse, protect your API Key.
-                </AlertDescription>
-              </Alert>
+            <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+              <CardHeader>
+                <CardTitle>Dify Configuration</CardTitle>
+                <CardDescription>Enter your Dataset ID and API Key from Dify.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="border-amber-500/50 bg-amber-500/10">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-700 dark:text-amber-300">
+                    To prevent API abuse, protect your API Key.
+                  </AlertDescription>
+                </Alert>
 
-              <div className="space-y-2">
-                <Label htmlFor="datasetId">Dataset ID</Label>
-                <Input
-                  id="datasetId"
-                  value={datasetId}
-                  onChange={(e) => setDatasetId(e.target.value)}
-                  placeholder="e.g., d0351bfd-defa-443f-8d77-c5d5b5eff704"
-                />
-                <p className="text-sm text-muted-foreground">Your unique dataset identifier from Dify.</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">API Key</Label>
-                <div className="relative">
+                <div className="space-y-2">
+                  <Label htmlFor="datasetId">Dataset ID</Label>
                   <Input
-                    id="apiKey"
-                    type={showApiKey ? "text" : "password"}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="e.g., dataset-IqgHiXUlyi1giWH3hCZvvdT7"
-                    className="pr-10"
+                    id="datasetId"
+                    value={datasetId}
+                    onChange={(e) => setDatasetId(e.target.value)}
+                    placeholder="e.g., d0351bfd-defa-443f-8d77-c5d5b5eff704"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  >
-                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                  <p className="text-sm text-muted-foreground">Your unique dataset identifier from Dify.</p>
                 </div>
-                <p className="text-sm text-muted-foreground">Your API key is stored securely.</p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">API Key</Label>
+                  <div className="relative">
+                    <Input
+                      id="apiKey"
+                      type={showApiKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="e.g., dataset-IqgHiXUlyi1giWH3hCZvvdT7"
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Your API key is stored securely.</p>
+                </div>
+
+                <Button onClick={handleSave} disabled={saving} className="w-full">
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? "Saving..." : "Save Settings"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Server Connection</CardTitle>
+              <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-medium">Server Status</Label>
+                    {status !== "idle" && (
+                      <Badge
+                        variant={status === "success" ? "default" : status === "error" ? "destructive" : "secondary"}
+                      >
+                        {status === "success" ? "Online" : status === "error" ? "Error" : "Testing..."}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Endpoint: {import.meta.env.VITE_APPWRITE_ENDPOINT}</p>
+                </div>
+                <Button onClick={sendPing} disabled={status === "loading"} variant="outline">
+                  {status === "loading" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Pinging...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="mr-2 h-4 w-4" />
+                      Send Ping
+                    </>
+                  )}
+                </Button>
               </div>
 
-              <Button onClick={handleSave} disabled={saving} className="w-full">
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? "Saving..." : "Save Settings"}
-              </Button>
+              {showLogs && logs.length > 0 && (
+                <div className="mt-6 space-y-2">
+                  <Label className="text-base font-medium">Request Log</Label>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Method</TableHead>
+                          <TableHead>Path</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Response</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {logs.slice(0, 5).map((log, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-xs">{log.date.toLocaleTimeString()}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.method}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.path}</TableCell>
+                            <TableCell>
+                              <Badge variant={log.status === 200 ? "default" : "destructive"}>{log.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs max-w-xs truncate">{log.response}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-          )}
         </div>
       </main>
     </div>
