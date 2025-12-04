@@ -2,11 +2,21 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users } from "lucide-react";
+import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { account, difyApi } from "@/integrations/appwrite/client";
 import SubUserManagement from "@/components/SubUserManagement";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface PingLog {
+  date: Date;
+  method: string;
+  path: string;
+  status: number;
+  response: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -16,6 +26,9 @@ const Dashboard = () => {
   const [hasApiSettings, setHasApiSettings] = useState(false);
   const [maxDocuments, setMaxDocuments] = useState(5);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pingStatus, setPingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [pingLogs, setPingLogs] = useState<PingLog[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -72,6 +85,36 @@ const Dashboard = () => {
     localStorage.removeItem("appwrite_session");
     toast.success("Signed out successfully");
     navigate("/auth");
+  };
+
+  const sendPing = async () => {
+    if (pingStatus === "loading") return;
+    setPingStatus("loading");
+    try {
+      const result = await account.get();
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/account",
+        status: 200,
+        response: `User: ${result.email}`,
+      };
+      setPingLogs((prev) => [log, ...prev]);
+      setPingStatus("success");
+      toast.success("Server is online and responding");
+    } catch (err: any) {
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/account",
+        status: err.code || 500,
+        response: err.message || "Connection failed",
+      };
+      setPingLogs((prev) => [log, ...prev]);
+      setPingStatus("error");
+      toast.error("Ping failed: " + log.response);
+    }
+    setShowLogs(true);
   };
 
 
@@ -232,8 +275,78 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Server Connection Test */}
+        <Card className="mt-8 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+          <CardHeader>
+            <CardTitle>Server Connection</CardTitle>
+            <CardDescription>Test connectivity to the backend server</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label className="text-base font-medium">Server Status</Label>
+                  {pingStatus !== "idle" && (
+                    <Badge
+                      variant={pingStatus === "success" ? "default" : pingStatus === "error" ? "destructive" : "secondary"}
+                    >
+                      {pingStatus === "success" ? "Online" : pingStatus === "error" ? "Error" : "Testing..."}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">Endpoint: appwrite.unified-bi.org</p>
+              </div>
+              <Button onClick={sendPing} disabled={pingStatus === "loading"} variant="outline">
+                {pingStatus === "loading" ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Pinging...
+                  </>
+                ) : (
+                  <>
+                    <Activity className="mr-2 h-4 w-4" />
+                    Send Ping
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {showLogs && pingLogs.length > 0 && (
+              <div className="mt-6 space-y-2">
+                <Label className="text-base font-medium">Request Log</Label>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead>Path</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Response</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pingLogs.slice(0, 5).map((log, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="text-xs">{log.date.toLocaleTimeString()}</TableCell>
+                          <TableCell className="text-xs font-mono">{log.method}</TableCell>
+                          <TableCell className="text-xs font-mono">{log.path}</TableCell>
+                          <TableCell>
+                            <Badge variant={log.status === 200 ? "default" : "destructive"}>{log.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs max-w-xs truncate">{log.response}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Team Management Section */}
-        <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+        <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
           <SubUserManagement />
         </div>
       </main>
