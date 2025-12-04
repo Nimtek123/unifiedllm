@@ -272,9 +272,12 @@ const Upload = () => {
                     <p className="text-xs text-muted-foreground mb-4">
                       You've reached your document limit of {maxDocuments} files.
                     </p>
-                    <Button variant="outline" onClick={() => navigate("/settings")}>
-                      Upgrade Account
-                    </Button>
+                    {!canUpload ? (
+                       <Button variant="outline" onClick={() => navigate("/settings")}>
+                        Upgrade Account
+                      </Button>
+                    )}
+                   
                   </div>
                 ) : (
                   <>
