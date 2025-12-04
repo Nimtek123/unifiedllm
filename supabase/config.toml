@@ -1,1 +1,19 @@
 project_id = "trhnhfqkxgbjcrficgek"
+
+[functions.appwrite-proxy]
+verify_jwt = false
+
+[functions.dify-proxy]
+verify_jwt = false
+
+[functions.query-workflow]
+verify_jwt = false
+
+[functions.get-documents]
+verify_jwt = false
+
+[functions.delete-document]
+verify_jwt = false
+
+[functions.upload-document]
+verify_jwt = false
