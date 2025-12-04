@@ -23,7 +23,7 @@ const Chat = () => {
 
       // Inject the conversation_id directly into the iframe src
       if (iframeRef.current) {
-        iframeRef.current.src = `https://dify.unified-bi.org/chatbot/LejUgszGK0FV7PVK?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`;
+        // iframeRef.current.src = `https://dify.unified-bi.org/chatbot/LejUgszGK0FV7PVK?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`;
       }
       await loadUserSettings(user.$id);
     } catch (error) {
@@ -141,7 +141,7 @@ const Chat = () => {
             <Card className="flex-1 overflow-hidden">
               <CardContent className="p-0 h-full">
                 <iframe
-                  ref={iframeRef}
+                  src={`https://dify.unified-bi.org/chatbot/LejUgszGK0FV7PVK?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`}
                   style={{ width: "100%", height: "100%", minHeight: "700px" }}
                   frameBorder="0"
                   allow="microphone"
