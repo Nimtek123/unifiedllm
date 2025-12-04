@@ -268,15 +268,13 @@ const Upload = () => {
                       <p className="text-sm font-medium mb-1 text-destructive">Upload Limit Reached</p>
                     ) : (
                       <p className="text-sm font-medium mb-1 text-destructive">No permissions to upload</p>
+                      <Button variant="outline" onClick={() => navigate("/settings")}>
+                        Upgrade Account
+                      </Button>
                     )}
                     <p className="text-xs text-muted-foreground mb-4">
                       You've reached your document limit of {maxDocuments} files.
                     </p>
-                    {!canUpload ? (
-                       <Button variant="outline" onClick={() => navigate("/settings")}>
-                        Upgrade Account
-                      </Button>
-                    )}
                    
                   </div>
                 ) : (
