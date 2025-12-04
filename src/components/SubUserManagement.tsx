@@ -115,6 +115,7 @@ const SubUserManagement = () => {
       const subUsers = members.documents.map((link, idx) => ({
         ...link,
         email: users[idx].email,
+        name: users[idx].name,
       }));
 
       setSubUsers(subUsers);
