@@ -20,12 +20,17 @@ const PERMISSIONS: { value: PermissionType; label: string }[] = [
 
 interface SubUser {
   $id: string;
-  childUserId: string;
+  userId: string;
   parentUserId: string;
-  permissions: PermissionType[];
-  is_active: boolean;
+  permissions: {
+    can_view: boolean;
+    can_upload: boolean;
+    can_delete: boolean;
+    can_manage_users: boolean;
+  };
   email?: string;
   name?: string;
+  password?: string;
 }
 
 const USER_LINKS = "team_members";
@@ -50,9 +55,34 @@ const SubUserManagement = () => {
 
   const [editForm, setEditForm] = useState({
     name: "",
-    permissions: [] as PermissionType[],
-    is_active: true,
+    password: "",
+    permissions: {
+      can_view: true,
+      can_upload: false,
+      can_delete: false,
+      can_manage_users: false,
+    },
   });
+
+  const togglePermission = (key: keyof typeof newUser.permissions, isEdit = false) => {
+    if (isEdit) {
+      setEditForm((f) => ({
+        ...f,
+        permissions: {
+          ...f.permissions,
+          [key]: !f.permissions[key],
+        },
+      }));
+    } else {
+      setNewUser((u) => ({
+        ...u,
+        permissions: {
+          ...u.permissions,
+          [key]: !u.permissions[key],
+        },
+      }));
+    }
+  };
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -99,10 +129,10 @@ const SubUserManagement = () => {
       const userId = ID.unique();
       await account.create(userId, newUser.email, newUser.password, newUser.name);
 
-      const canView = newUser.permissions.includes("view");
-      const canUpload = newUser.permissions.includes("upload");
-      const canDelete = newUser.permissions.includes("delete");
-      const canManageUsers = newUser.permissions.includes("manage_users");
+      const canView = newUser.permissions.can_view;
+      const canUpload = newUser.permissions.can_upload;
+      const canDelete = newUser.permissions.can_delete;
+      const canManageUsers = newUser.permissions.can_manage_users;
 
       // 2️⃣ Link parent → child
       await databases.createDocument(DATABASE_ID, USER_LINKS, ID.unique(), {
@@ -110,10 +140,10 @@ const SubUserManagement = () => {
         userId: userId,
 
         // Boolean permission fields
-        can_view: newUser.permissions.includes("view"),
-        can_upload: newUser.permissions.includes("upload"),
-        can_delete: newUser.permissions.includes("delete"),
-        can_manage_users: newUser.permissions.includes("manage_users"),
+        can_view: canView,
+        can_upload: canUpload,
+        can_delete: canDelete,
+        can_manage_users: canManageUsers,
       });
 
       toast.success("Team member added successfully");
