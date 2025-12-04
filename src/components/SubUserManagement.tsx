@@ -240,6 +240,41 @@ const SubUserManagement = () => {
     }
   };
 
+  // Open form for adding or editing
+  const openForm = (user?: SubUser) => {
+    if (user) {
+      // Editing existing user
+      setEditingId(user.$id);
+      setNewUser({
+        email: user.email || "",
+        name: user.name || "",
+        password: "", // Leave blank; only update if user sets new password
+        permissions: {
+          can_view: user.permissions.can_view || false,
+          can_upload: user.permissions.can_upload || false,
+          can_delete: user.permissions.can_delete || false,
+          can_manage_users: user.permissions.can_manage_users || false,
+        },
+      });
+    } else {
+      // Adding new user
+      setEditingId(null);
+      setNewUser({
+        email: "",
+        name: "",
+        password: "",
+        permissions: {
+          can_view: true,
+          can_upload: false,
+          can_delete: false,
+          can_manage_users: false,
+        },
+      });
+    }
+
+    setShowAddForm(true);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -335,7 +370,7 @@ const SubUserManagement = () => {
         )}
 
         {/* Table */}
-        <Button className="mb-4" onClick={() => setShowAddForm(!showAddForm)}>
+        <Button className="mb-4" onClick={() => openForm()}>
           <UserPlus className="mr-2 h-4 w-4" /> Add Sub User
         </Button>
 
@@ -361,7 +396,7 @@ const SubUserManagement = () => {
                 </TableCell>
 
                 <TableCell className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => handleEdit(user)}>
+                  <Button size="sm" variant="secondary" onClick={() => openForm(user)}>
                     <Edit2 size={14} />
                   </Button>
 
