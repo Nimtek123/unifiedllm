@@ -66,9 +66,8 @@ const Upload = () => {
         Query.equal("userId", effectiveUserId),
       ]);
 
-      const settings = response.documents.find((doc: any) => doc.userId === userId);
+      const settings = response.documents.find((doc: any) => doc.userId === effectiveUserId);
 
-      console.log(settings);
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
         setMaxDocuments(settings.maxDocuments || 5);
