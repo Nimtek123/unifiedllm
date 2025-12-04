@@ -36,15 +36,41 @@ const Dashboard = () => {
 
   const checkAuth = async () => {
     try {
+      // First, try to get current session
+      const session = await account.getSession("current");
+
+      // Then get account with the session
       const currentUser = await account.get();
       setUser(currentUser);
       const labels = currentUser.labels || [];
       setIsAdmin(labels.includes("admin"));
       await loadUserData(currentUser.$id);
     } catch (error) {
-      alert(JSON.stringify(error));
-      // Fallback to localStorage session for cross-domain cookie issues
+      console.log("Auth check failed, trying fallback:", error);
+
+      // Fallback 1: Try to create session from stored data
       const storedSession = localStorage.getItem("appwrite_session");
+      if (storedSession) {
+        try {
+          const sessionData = JSON.parse(storedSession);
+
+          // Try to create session with stored credentials
+          const newSession = await account.createEmailPasswordSession(
+            sessionData.email,
+            "", // You'll need to store password securely or use different approach
+          );
+
+          // Retry account.get() with new session
+          const currentUser = await account.get();
+          setUser(currentUser);
+          await loadUserData(currentUser.$id);
+          return;
+        } catch (sessionError) {
+          console.log("Session recreation failed:", sessionError);
+        }
+      }
+
+      // Fallback 2: Set user from stored data only
       if (storedSession) {
         const sessionData = JSON.parse(storedSession);
         setUser({
@@ -116,7 +142,6 @@ const Dashboard = () => {
     }
     setShowLogs(true);
   };
-
 
   if (isLoading) {
     return (
@@ -288,7 +313,9 @@ const Dashboard = () => {
                   <Label className="text-base font-medium">Server Status</Label>
                   {pingStatus !== "idle" && (
                     <Badge
-                      variant={pingStatus === "success" ? "default" : pingStatus === "error" ? "destructive" : "secondary"}
+                      variant={
+                        pingStatus === "success" ? "default" : pingStatus === "error" ? "destructive" : "secondary"
+                      }
                     >
                       {pingStatus === "success" ? "Online" : pingStatus === "error" ? "Error" : "Testing..."}
                     </Badge>
