@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Trash2, Edit2, Save, X, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { account, ID } from "@/integrations/appwrite/client";
 
 type PermissionType = "view" | "upload" | "delete" | "manage_users";
 
