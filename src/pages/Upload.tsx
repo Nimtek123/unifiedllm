@@ -26,7 +26,7 @@ const Upload = () => {
     can_delete: false,
     can_manage_users: false,
   });
-  let subUser = false;
+  const [subUser, setSubUser] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -51,7 +51,7 @@ const Upload = () => {
       if (teamRes.documents.length > 0) {
         const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
-        subUser = true;
+        setSubUser(true);
         setUserPermissions({
           can_view: subUserDoc.can_view,
           can_upload: subUserDoc.can_upload,
