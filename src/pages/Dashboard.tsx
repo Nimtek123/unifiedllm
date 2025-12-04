@@ -36,6 +36,8 @@ const Dashboard = () => {
     can_manage_users: false,
   });
 
+  let subUser = false;
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -116,7 +118,7 @@ const Dashboard = () => {
       if (teamRes.documents.length > 0) {
         const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
-
+        subUser = true;
         setUserPermissions({
           can_view: subUserDoc.can_view,
           can_upload: subUserDoc.can_upload,
@@ -404,7 +406,7 @@ const Dashboard = () => {
         </Card> */}
 
         {/* Team Management Section */}
-        {userPermissions.can_manage_users && (
+        {!subUser || userPermissions.can_manage_users ? (
           <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
             <SubUserManagement />
           </div>
