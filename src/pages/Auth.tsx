@@ -61,6 +61,7 @@ const Auth = () => {
         JSON.stringify({
           userId: session.userId,
           sessionId: session.$id,
+          sessionSecret: session.secret, // This is crucial
           email,
           name: fullName,
         }),

@@ -55,15 +55,21 @@ const Dashboard = () => {
           const sessionData = JSON.parse(storedSession);
           const decodedPassword = atob(sessionData.encodedPassword);
 
-          console.log(decodedPassword);
-          // Try to create session with stored credentials
-          const newSession = await account.createEmailPasswordSession(
-            sessionData.email,
-            decodedPassword, // You'll need to store password securely or use different approach
-          );
+          // IMPORTANT: Don't create a new session, use the existing one
+          // Set the client to use the stored session
+          client.headers["X-Appwrite-Session"] = sessionData.sessionSecret;
+
+          // Now try to get account with the session header
+          const currentUser = await account.get();
+
+          // Restore the session properly
+          if (sessionData.sessionSecret) {
+            // Re-create the session cookie
+            document.cookie = `a_session_${YOUR_PROJECT_ID}=${sessionData.sessionSecret}; path=/; domain=.unified-bi.org; max-age=${60 * 60 * 24 * 30}; samesite=none; secure`;
+          }
 
           // Retry account.get() with new session
-          const currentUser = await account.get();
+          // const currentUser = await account.get();
           setUser(currentUser);
           await loadUserData(currentUser.$id);
           return;
