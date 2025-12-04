@@ -110,12 +110,13 @@ const SubUserManagement = () => {
         Query.equal("parentUserId", currentUserId),
       ]);
 
+      cons;
       const users = await Promise.all(members.documents.map((link) => account.get(link.userId)));
 
       const subUsers = members.documents.map((link, idx) => ({
         ...link,
-        email: users[idx].email,
-        name: users[idx].name,
+        email: users[link.userId].email,
+        name: users[link.userId].name,
       }));
 
       setSubUsers(subUsers);
