@@ -47,8 +47,13 @@ export const appwriteFetch = async (path: string, options: RequestInit = {}) => 
 
 // Database helpers using API key
 export const appwriteDb = {
-  listDocuments: async (databaseId: string, collectionId: string) => {
-    return appwriteFetch(`/databases/${databaseId}/collections/${collectionId}/documents`);
+  listDocuments: async (databaseId: string, collectionId: string, queries?: string[]) => {
+    let url = `/databases/${databaseId}/collections/${collectionId}/documents`;
+    if (queries && queries.length > 0) {
+      const queryParams = queries.map(q => `queries[]=${encodeURIComponent(q)}`).join('&');
+      url += `?${queryParams}`;
+    }
+    return appwriteFetch(url);
   },
 
   getDocument: async (databaseId: string, collectionId: string, documentId: string) => {
