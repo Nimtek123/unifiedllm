@@ -194,19 +194,19 @@ const SubUserManagement = () => {
       });
 
       // 2️⃣ Update Auth user if password or name is changed
-      if (newUser.password || newUser.name) {
-        const payload: any = {};
+      // if (newUser.password || newUser.name) {
+      //   const payload: any = {};
 
-        if (newUser.password && newUser.password.trim() !== "") {
-          payload.password = newUser.password;
-          await account.updatePassword(newUser.password);
-        }
+      //   if (newUser.password && newUser.password.trim() !== "") {
+      //     payload.password = newUser.password;
+      //     await account.updatePassword(newUser.password);
+      //   }
 
-        if (newUser.name && newUser.name.trim() !== "") {
-          payload.name = newUser.name;
-          await account.updateName(newUser.name);
-        }
-      }
+      //   if (newUser.name && newUser.name.trim() !== "") {
+      //     payload.name = newUser.name;
+      //     await account.updateName(newUser.name);
+      //   }
+      // }
 
       toast.success("Team member updated");
       setShowAddForm(false);
@@ -289,6 +289,7 @@ const SubUserManagement = () => {
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 readOnly={!!editingId} // make readonly if editing
+                disabled={!!editingId}
               />
               <Input
                 placeholder="Name"
@@ -300,6 +301,8 @@ const SubUserManagement = () => {
                 type="password"
                 value={newUser.password}
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                readOnly={!!editingId} // make readonly if editing
+                disabled={!!editingId}
               />
 
               <div>
@@ -390,6 +393,7 @@ const SubUserManagement = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Permissions</TableHead>
               <TableHead>Actions</TableHead>
@@ -399,6 +403,7 @@ const SubUserManagement = () => {
           <TableBody>
             {subUsers.map((user) => (
               <TableRow key={user.$id}>
+                <TableCell>{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
 
                 <TableCell>
