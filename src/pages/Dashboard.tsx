@@ -53,7 +53,7 @@ const Dashboard = () => {
       if (storedSession) {
         try {
           const sessionData = JSON.parse(storedSession);
-          const decodedPassword = atob(sessionData.password);
+          const decodedPassword = atob(sessionData.encodedPassword);
 
           // Try to create session with stored credentials
           const newSession = await account.createEmailPasswordSession(
