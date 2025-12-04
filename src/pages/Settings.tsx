@@ -211,7 +211,7 @@ const Settings = () => {
           </Card>
 
           {/* Upgrade Account Card */}
-          {!isSubUser && (
+          {!isSubUser && !isAdmin && (
             <Card className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
               <CardHeader>
                 <CardTitle>Upgrade Account</CardTitle>
