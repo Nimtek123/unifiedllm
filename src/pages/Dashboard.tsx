@@ -6,6 +6,7 @@ import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings,
 import { toast } from "sonner";
 import { account, difyApi } from "@/integrations/appwrite/client";
 import SubUserManagement from "@/components/SubUserManagement";
+import { Label } from "@/components/ui/label";
 
 const Dashboard = () => {
   const navigate = useNavigate();
