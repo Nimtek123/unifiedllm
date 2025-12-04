@@ -21,6 +21,14 @@ const Upload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [maxDocuments, setMaxDocuments] = useState(5);
 
+  let subUser = false;
+  let userPermissions = {
+    can_view: true,
+    can_upload: false,
+    can_delete: false,
+    can_manage_users: false,
+  };
+
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
@@ -36,9 +44,29 @@ const Upload = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
+      let effectiveUserId = userId;
+
+      // Check if logged-in user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
+
+      if (teamRes.documents.length > 0) {
+        effectiveUserId = teamRes.documents[0].parentUserId;
+        subUser = true;
+        userPermissions = {
+          can_view: subUserDoc.can_view ?? false,
+          can_upload: subUserDoc.can_upload ?? false,
+          can_delete: subUserDoc.can_delete ?? false,
+          can_manage_users: subUserDoc.can_manage_users ?? false,
+        };
+      }
+
+      // Load settings for the effective user
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
+        Query.equal("userId", effectiveUserId),
+      ]);
+
       const settings = response.documents.find((doc: any) => doc.userId === userId);
-      
+
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
         setMaxDocuments(settings.maxDocuments || 5);
@@ -54,10 +82,9 @@ const Upload = () => {
 
   const loadDocuments = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`,
-        { headers: { Authorization: `Bearer ${apiKey}` } }
-      );
+      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setDocuments(data.data || []);
@@ -92,11 +119,11 @@ const Upload = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      const validFiles = Array.from(files).filter(file => 
-        file.name.endsWith('.pdf') || file.name.endsWith('.docx') || file.name.endsWith('.txt')
+      const validFiles = Array.from(files).filter(
+        (file) => file.name.endsWith(".pdf") || file.name.endsWith(".docx") || file.name.endsWith(".txt"),
       );
       if (validFiles.length > 0) {
         setSelectedFiles(validFiles);
@@ -118,7 +145,7 @@ const Upload = () => {
       const remaining = maxDocuments - documents.length;
       toast.error(
         `Document limit exceeded! You can upload ${remaining > 0 ? remaining : 0} more file(s). ` +
-        `Current: ${documents.length}/${maxDocuments}. Please upgrade your account for more uploads.`
+          `Current: ${documents.length}/${maxDocuments}. Please upgrade your account for more uploads.`,
       );
       return;
     }
@@ -131,10 +158,13 @@ const Upload = () => {
       for (const file of selectedFiles) {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("data", JSON.stringify({
-          indexing_technique: indexingTechnique,
-          process_rule: { mode: "automatic" }
-        }));
+        formData.append(
+          "data",
+          JSON.stringify({
+            indexing_technique: indexingTechnique,
+            process_rule: { mode: "automatic" },
+          }),
+        );
 
         const response = await fetch(
           `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/document/create_by_file`,
@@ -142,7 +172,7 @@ const Upload = () => {
             method: "POST",
             headers: { Authorization: `Bearer ${userSettings.apiKey}` },
             body: formData,
-          }
+          },
         );
 
         if (response.ok) {
@@ -168,7 +198,7 @@ const Upload = () => {
   };
 
   const remainingUploads = maxDocuments - documents.length;
-  const canUpload = remainingUploads > 0;
+  const canUpload = remainingUploads > 0 && userPermissions.can_upload;
 
   if (isLoading) {
     return (
@@ -224,7 +254,8 @@ const Upload = () => {
               <CardHeader>
                 <CardTitle>Upload New Files</CardTitle>
                 <CardDescription>
-                  Supported formats: PDF, DOCX, TXT (Max 20MB) • {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached"}
+                  Supported formats: PDF, DOCX, TXT (Max 20MB) •{" "}
+                  {remainingUploads > 0 ? `${remainingUploads} uploads remaining` : "Upload limit reached"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -241,20 +272,32 @@ const Upload = () => {
                   </div>
                 ) : (
                   <>
-                    <div 
+                    <div
                       className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                        isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary'
+                        isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary"
                       }`}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      onClick={() => document.getElementById('file-upload')?.click()}
+                      onClick={() => document.getElementById("file-upload")?.click()}
                     >
-                      <UploadIcon className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <UploadIcon
+                        className={`w-12 h-12 mx-auto mb-4 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
+                      />
                       <div className="space-y-4">
                         <p className="text-sm font-medium mb-1">Drop your files here or click to browse</p>
-                        <p className="text-xs text-muted-foreground">Files will be processed and added to your knowledge base</p>
-                        <input type="file" id="file-upload" className="hidden" accept=".pdf,.docx,.txt" multiple onChange={handleFileSelect} disabled={isUploading} />
+                        <p className="text-xs text-muted-foreground">
+                          Files will be processed and added to your knowledge base
+                        </p>
+                        <input
+                          type="file"
+                          id="file-upload"
+                          className="hidden"
+                          accept=".pdf,.docx,.txt"
+                          multiple
+                          onChange={handleFileSelect}
+                          disabled={isUploading}
+                        />
                         <label htmlFor="file-upload">
                           <Button asChild variant="outline" disabled={isUploading}>
                             <span>Select Files</span>
@@ -267,9 +310,9 @@ const Upload = () => {
                       <div className="space-y-2 p-3 bg-muted rounded-lg">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">Selected files:</p>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-6 text-xs text-muted-foreground hover:text-destructive"
                             onClick={() => setSelectedFiles([])}
                           >
@@ -278,12 +321,14 @@ const Upload = () => {
                         </div>
                         {selectedFiles.map((file, idx) => (
                           <div key={idx} className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>• {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                            <span>
+                              • {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                            </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-5 w-5 p-0 hover:text-destructive"
-                              onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                              onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))}
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -300,7 +345,9 @@ const Upload = () => {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Indexing Technique</label>
                       <Select value={indexingTechnique} onValueChange={setIndexingTechnique}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="high_quality">High Quality</SelectItem>
                           <SelectItem value="economy">Economy</SelectItem>
@@ -315,8 +362,19 @@ const Upload = () => {
                       </div>
                     )}
 
-                    <Button className="w-full" onClick={handleUpload} disabled={isUploading || selectedFiles.length === 0}>
-                      {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : "Upload All Files"}
+                    <Button
+                      className="w-full"
+                      onClick={handleUpload}
+                      disabled={isUploading || selectedFiles.length === 0}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        "Upload All Files"
+                      )}
                     </Button>
                   </>
                 )}
@@ -326,7 +384,9 @@ const Upload = () => {
             <Card className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <CardHeader>
                 <CardTitle>Your Files</CardTitle>
-                <CardDescription>{documents.length} {documents.length === 1 ? "file" : "files"} in your knowledge base</CardDescription>
+                <CardDescription>
+                  {documents.length} {documents.length === 1 ? "file" : "files"} in your knowledge base
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {documents.length === 0 ? (
@@ -337,7 +397,10 @@ const Upload = () => {
                 ) : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {documents.map((doc: any) => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                      >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <File className="w-5 h-5 text-primary flex-shrink-0" />
                           <div className="min-w-0 flex-1">
