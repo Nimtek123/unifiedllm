@@ -50,7 +50,7 @@ export const appwriteDb = {
   listDocuments: async (databaseId: string, collectionId: string, queries?: string[]) => {
     let url = `/databases/${databaseId}/collections/${collectionId}/documents`;
     if (queries && queries.length > 0) {
-      const queryParams = queries.map(q => `queries[]=${encodeURIComponent(q)}`).join('&');
+      const queryParams = queries.map((q) => `queries[]=${encodeURIComponent(q)}`).join("&");
       url += `?${queryParams}`;
     }
     return appwriteFetch(url);
