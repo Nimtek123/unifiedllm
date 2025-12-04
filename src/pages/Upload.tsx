@@ -53,11 +53,10 @@ const Upload = () => {
         const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
         subUser = true;
-        userPermissions = {
-          can_view: subUserDoc.can_view,
-          can_upload: subUserDoc.can_upload,
-          can_delete: subUserDoc.can_delete,
-          can_manage_users: subUserDoc.can_manage_users,
+        userPermissions.can_view = subUserDoc.can_view;
+        userPermissions.can_upload = subUserDoc.can_upload;
+        userPermissions.can_delete = subUserDoc.can_delete;
+        userPermissions.can_manage_users = subUserDoc.can_manage_users;
         };
       }
 
