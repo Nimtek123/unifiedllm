@@ -166,6 +166,7 @@ const SubUserManagement = () => {
     setEditingId(user.$id);
     setEditForm({
       name: user.name || "",
+      email: user.email || "",
       permissions: {
         can_view: user.can_view || false,
         can_upload: user.can_upload || false,
@@ -190,7 +191,8 @@ const SubUserManagement = () => {
       // 1️⃣ Update USER_LINKS (permissions + is_active)
       await databases.updateDocument(DATABASE_ID, USER_LINKS, id, {
         permissions: editForm.permissions,
-        is_active: editForm.is_active,
+        email: editForm.email,
+        name: editForm.name,
       });
 
       // 2️⃣ Update Auth user if password or name is changed
