@@ -75,4 +75,52 @@ export const appwriteDb = {
   },
 };
 
+// Dify API helper that calls the secure edge function
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://trhnhfqkxgbjcrficgek.supabase.co';
+
+export const difyApi = {
+  listDocuments: async (userId: string) => {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/dify-proxy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'listDocuments', userId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to list documents');
+    }
+    return response.json();
+  },
+  
+  deleteDocument: async (userId: string, documentId: string) => {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/dify-proxy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteDocument', userId, documentId }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete document');
+    }
+    return response.json();
+  },
+  
+  uploadDocuments: async (userId: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    formData.append('userId', userId);
+    formData.append('action', 'uploadDocuments');
+    
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/dify-proxy`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to upload documents');
+    }
+    return response.json();
+  },
+};
+
 export { client, ID };
