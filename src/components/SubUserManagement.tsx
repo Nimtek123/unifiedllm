@@ -40,7 +40,12 @@ const SubUserManagement = () => {
     email: "",
     name: "",
     password: "",
-    permissions: ["view"] as PermissionType[],
+    permissions: {
+      can_view: true,
+      can_upload: false,
+      can_delete: false,
+      can_manage_users: false,
+    },
   });
 
   const [editForm, setEditForm] = useState({
@@ -94,11 +99,21 @@ const SubUserManagement = () => {
       const userId = ID.unique();
       await account.create(userId, newUser.email, newUser.password, newUser.name);
 
+      const canView = newUser.permissions.includes("view");
+      const canUpload = newUser.permissions.includes("upload");
+      const canDelete = newUser.permissions.includes("delete");
+      const canManageUsers = newUser.permissions.includes("manage_users");
+
       // 2️⃣ Link parent → child
       await databases.createDocument(DATABASE_ID, USER_LINKS, ID.unique(), {
         parentUserId: currentUserId,
         userId: userId,
-        permissions: newUser.permissions,
+
+        // Boolean permission fields
+        can_view: newUser.permissions.includes("view"),
+        can_upload: newUser.permissions.includes("upload"),
+        can_delete: newUser.permissions.includes("delete"),
+        can_manage_users: newUser.permissions.includes("manage_users"),
       });
 
       toast.success("Team member added successfully");
@@ -191,19 +206,57 @@ const SubUserManagement = () => {
               <div>
                 <label className="font-medium">Permissions:</label>
                 <div className="flex gap-3 mt-2 flex-wrap">
-                  {PERMISSIONS.map((p) => (
-                    <div key={p.value} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={newUser.permissions.includes(p.value)}
-                        onCheckedChange={() =>
-                          togglePermission(p.value, newUser.permissions, (perms) =>
-                            setNewUser((u) => ({ ...u, permissions: perms })),
-                          )
-                        }
-                      />
-                      {p.label}
-                    </div>
-                  ))}
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={newUser.permissions.can_view}
+                      onCheckedChange={(checked) =>
+                        setNewUser((u) => ({
+                          ...u,
+                          permissions: { ...u.permissions, can_view: Boolean(checked) },
+                        }))
+                      }
+                    />
+                    View Documents
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={newUser.permissions.can_upload}
+                      onCheckedChange={(checked) =>
+                        setNewUser((u) => ({
+                          ...u,
+                          permissions: { ...u.permissions, can_upload: Boolean(checked) },
+                        }))
+                      }
+                    />
+                    Upload Documents
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={newUser.permissions.can_delete}
+                      onCheckedChange={(checked) =>
+                        setNewUser((u) => ({
+                          ...u,
+                          permissions: { ...u.permissions, can_delete: Boolean(checked) },
+                        }))
+                      }
+                    />
+                    Delete Documents
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={newUser.permissions.can_manage_users}
+                      onCheckedChange={(checked) =>
+                        setNewUser((u) => ({
+                          ...u,
+                          permissions: { ...u.permissions, can_manage_users: Boolean(checked) },
+                        }))
+                      }
+                    />
+                    Manage Users
+                  </div>
                 </div>
               </div>
 
@@ -233,19 +286,10 @@ const SubUserManagement = () => {
                 <TableCell>{user.email}</TableCell>
 
                 <TableCell>
-                  {user.permissions.map((p) => (
-                    <Badge key={p} className="mr-1">
-                      {p}
-                    </Badge>
-                  ))}
-                </TableCell>
-
-                <TableCell>
-                  {user.is_active ? (
-                    <Badge variant="default">Active</Badge>
-                  ) : (
-                    <Badge variant="destructive">Disabled</Badge>
-                  )}
+                  {user.can_view && <Badge className="mr-1">View</Badge>}
+                  {user.can_upload && <Badge className="mr-1">Upload</Badge>}
+                  {user.can_delete && <Badge className="mr-1">Delete</Badge>}
+                  {user.can_manage_users && <Badge className="mr-1">Manage Users</Badge>}
                 </TableCell>
 
                 <TableCell className="flex gap-2">
