@@ -113,10 +113,11 @@ const SubUserManagement = () => {
       cons;
       const users = await Promise.all(members.documents.map((link) => account.get(link.userId)));
 
+      console.log(users);
       const subUsers = members.documents.map((link, idx) => ({
         ...link,
-        email: users[link.userId].email,
-        name: users[link.userId].name,
+        email: users[idx].email,
+        name: users[idx].name,
       }));
 
       setSubUsers(subUsers);
