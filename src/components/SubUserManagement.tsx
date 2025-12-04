@@ -204,7 +204,7 @@ const SubUserManagement = () => {
                 onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
               />
               <Input
-                placeholder="Name *"
+                placeholder="Password *"
                 value={newUser.password}
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
               />
