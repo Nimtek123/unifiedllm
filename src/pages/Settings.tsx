@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID, Query } from "@/integrations/appwrite/client";
 import { AlertTriangle, Eye, EyeOff, Save, ArrowLeft, Crown, Mail, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
