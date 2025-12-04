@@ -68,7 +68,7 @@ const SubUserManagement = () => {
 
   const togglePermission = (key: keyof typeof newUser.permissions, isEdit = false) => {
     if (isEdit) {
-      setEditForm((f) => ({
+      setNewUser((f) => ({
         ...f,
         permissions: {
           ...f.permissions,
@@ -165,6 +165,7 @@ const SubUserManagement = () => {
 
   // Edit
   const handleEdit = (user: SubUser) => {
+    console.log(user);
     setEditingId(user.$id);
     setEditForm({
       name: user.name || "",
@@ -244,7 +245,7 @@ const SubUserManagement = () => {
     if (user) {
       // Editing existing user
       setEditingId(user.$id);
-      setEditForm({
+      setNewUser({
         email: user.email || "",
         name: user.name || "",
         password: "", // Leave blank; only update if user sets new password
