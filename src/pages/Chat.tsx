@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, FileText, Upload, AlertCircle } from "lucide-react";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, difyApi } from "@/integrations/appwrite/client";
 
 const Chat = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [hasDocuments, setHasDocuments] = useState(false);
-  const [userSettings, setUserSettings] = useState<any>(null);
+  const [hasSettings, setHasSettings] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -18,42 +18,23 @@ const Chat = () => {
   const checkAuthAndLoad = async () => {
     try {
       const user = await account.get();
-      await loadUserSettings(user.$id);
+      await checkDocuments(user.$id);
     } catch (error) {
       navigate("/auth");
     }
   };
 
-  const loadUserSettings = async (userId: string) => {
+  const checkDocuments = async (userId: string) => {
     try {
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
-      const settings = response.documents.find((doc: any) => doc.userId === userId);
-      
-      if (settings?.datasetId && settings?.apiKey) {
-        setUserSettings(settings);
-        await checkDocuments(settings.datasetId, settings.apiKey);
+      const result = await difyApi.checkDocuments(userId);
+      setHasDocuments(result.hasDocuments);
+      setHasSettings(true);
+    } catch (error: any) {
+      if (error.message?.includes('not configured')) {
+        setHasSettings(false);
       } else {
-        setIsLoading(false);
+        console.error("Error checking documents:", error);
       }
-    } catch (error) {
-      console.error("Error loading settings:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const checkDocuments = async (datasetId: string, apiKey: string) => {
-    try {
-      const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=1`,
-        { headers: { Authorization: `Bearer ${apiKey}` } }
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        setHasDocuments((data.total || data.data?.length || 0) > 0);
-      }
-    } catch (error) {
-      console.error("Error checking documents:", error);
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +60,7 @@ const Chat = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1 flex flex-col">
-        {!userSettings ? (
+        {!hasSettings ? (
           <Card className="max-w-lg mx-auto animate-slide-up">
             <CardHeader className="text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">

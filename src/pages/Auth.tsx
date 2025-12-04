@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Brain, Sparkles } from "lucide-react";
+import { Brain, Sparkles, AlertTriangle } from "lucide-react";
 import { account, ID } from "@/integrations/appwrite/client";
 import ReCAPTCHA from "react-google-recaptcha";
+
+// Get ReCAPTCHA site key from environment or show warning if not configured
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -40,7 +43,7 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!captchaToken) {
+    if (RECAPTCHA_SITE_KEY && !captchaToken) {
       toast.error("Please complete the CAPTCHA verification");
       return;
     }
@@ -79,7 +82,7 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!captchaToken) {
+    if (RECAPTCHA_SITE_KEY && !captchaToken) {
       toast.error("Please complete the CAPTCHA verification");
       return;
     }
@@ -134,6 +137,14 @@ const Auth = () => {
             <CardDescription>Sign in or create a new account</CardDescription>
           </CardHeader>
           <CardContent>
+            {!RECAPTCHA_SITE_KEY && (
+              <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/50 flex items-start gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  ReCAPTCHA not configured. Bot protection is disabled. Set VITE_RECAPTCHA_SITE_KEY to enable.
+                </p>
+              </div>
+            )}
             <Tabs defaultValue={selectedPlan ? "signup" : "signin"} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -166,13 +177,15 @@ const Auth = () => {
                       disabled={isLoading}
                     />
                   </div>
-                  <div className="flex justify-center">
-                    <ReCAPTCHA
-                      ref={recaptchaRef}
-                      sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-                      onChange={onCaptchaChange}
-                    />
-                  </div>
+                  {RECAPTCHA_SITE_KEY && (
+                    <div className="flex justify-center">
+                      <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey={RECAPTCHA_SITE_KEY}
+                        onChange={onCaptchaChange}
+                      />
+                    </div>
+                  )}
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
@@ -218,13 +231,15 @@ const Auth = () => {
                       minLength={8}
                     />
                   </div>
-                  <div className="flex justify-center">
-                    <ReCAPTCHA
-                      ref={recaptchaRef}
-                      sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-                      onChange={onCaptchaChange}
-                    />
-                  </div>
+                  {RECAPTCHA_SITE_KEY && (
+                    <div className="flex justify-center">
+                      <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey={RECAPTCHA_SITE_KEY}
+                        onChange={onCaptchaChange}
+                      />
+                    </div>
+                  )}
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Creating account..." : "Create Account"}
                   </Button>

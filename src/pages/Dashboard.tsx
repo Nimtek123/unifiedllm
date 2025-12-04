@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Upload, MessageSquare, FileText, LogOut, FolderOpen, Settings, Users } from "lucide-react";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, difyApi } from "@/integrations/appwrite/client";
 import SubUserManagement from "@/components/SubUserManagement";
 
 const Dashboard = () => {
@@ -26,7 +26,7 @@ const Dashboard = () => {
       setUser(currentUser);
       const labels = currentUser.labels || [];
       setIsAdmin(labels.includes("admin"));
-      await loadUserSettings(currentUser.$id);
+      await loadUserData(currentUser.$id);
     } catch (error) {
       // Fallback to localStorage session for cross-domain cookie issues
       const storedSession = localStorage.getItem("appwrite_session");
@@ -37,7 +37,7 @@ const Dashboard = () => {
           name: sessionData.name || sessionData.email,
           email: sessionData.email,
         });
-        await loadUserSettings(sessionData.userId);
+        await loadUserData(sessionData.userId);
       } else {
         navigate("/auth");
       }
@@ -46,33 +46,18 @@ const Dashboard = () => {
     }
   };
 
-  const loadUserSettings = async (userId: string) => {
+  const loadUserData = async (userId: string) => {
     try {
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
-      const userSettings = response.documents.find((doc: any) => doc.userId === userId);
-
-      if (userSettings?.datasetId && userSettings?.apiKey) {
-        setHasApiSettings(true);
-        setMaxDocuments(userSettings.maxDocuments || 5);
-        await fetchDocumentCount(userSettings.datasetId, userSettings.apiKey);
+      const result = await difyApi.listDocuments(userId);
+      setFileCount(result.total || result.data?.length || 0);
+      setMaxDocuments(result.maxDocuments || 5);
+      setHasApiSettings(true);
+    } catch (error: any) {
+      if (error.message?.includes('not configured')) {
+        setHasApiSettings(false);
+      } else {
+        console.error("Error loading user data:", error);
       }
-    } catch (error) {
-      console.error("Error loading settings:", error);
-    }
-  };
-
-  const fetchDocumentCount = async (datasetId: string, apiKey: string) => {
-    try {
-      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFileCount(data.total || data.data?.length || 0);
-      }
-    } catch (error) {
-      console.error("Error fetching documents:", error);
     }
   };
 

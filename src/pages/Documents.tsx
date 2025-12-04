@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2, Trash2, FileText, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, difyApi } from "@/integrations/appwrite/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,8 @@ const Documents = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userSettings, setUserSettings] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hasSettings, setHasSettings] = useState(false);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -62,69 +63,41 @@ const Documents = () => {
   const checkAuthAndLoad = async () => {
     try {
       const user = await account.get();
-      await loadUserSettings(user.$id);
+      setUserId(user.$id);
+      await loadDocuments(user.$id);
     } catch (error) {
       navigate("/auth");
     }
   };
 
-  const loadUserSettings = async (userId: string) => {
+  const loadDocuments = async (uid: string) => {
     try {
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
-      const settings = response.documents.find((doc: any) => doc.userId === userId);
-
-      if (settings?.datasetId && settings?.apiKey) {
-        setUserSettings(settings);
-        await loadDocuments(settings.datasetId, settings.apiKey);
-      } else {
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error("Error loading settings:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const loadDocuments = async (datasetId: string, apiKey: string) => {
-    try {
-      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data.data || []);
-      }
+      const result = await difyApi.listDocuments(uid);
+      setDocuments(result.data || []);
+      setHasSettings(true);
     } catch (error: any) {
-      console.error("Error loading documents:", error);
-      toast.error("Failed to load documents");
+      if (error.message?.includes('not configured')) {
+        setHasSettings(false);
+      } else {
+        console.error("Error loading documents:", error);
+        toast.error("Failed to load documents");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (doc: DifyDocument) => {
-    if (!userSettings) return;
+    if (!userId) return;
     setDeletingId(doc.id);
 
     try {
-      const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/documents/${doc.id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${userSettings.apiKey}` },
-        },
-      );
-
-      if (response.ok) {
-        toast.success("Document deleted successfully");
-        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-      } else {
-        const error = await response.json();
-        toast.error(`Failed to delete: ${error.message || "Unknown error"}`);
-      }
+      await difyApi.deleteDocument(userId, doc.id);
+      toast.success("Document deleted successfully");
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     } catch (error: any) {
       console.error("Error deleting document:", error);
-      toast.error("Failed to delete document");
+      toast.error(`Failed to delete: ${error.message || "Unknown error"}`);
     } finally {
       setDeletingId(null);
     }
@@ -175,7 +148,7 @@ const Documents = () => {
             <CardDescription>Manage files in your knowledge base</CardDescription>
           </CardHeader>
           <CardContent>
-            {!userSettings ? (
+            {!hasSettings ? (
               <div className="text-center py-12">
                 <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg font-medium mb-1">API Settings Required</p>
