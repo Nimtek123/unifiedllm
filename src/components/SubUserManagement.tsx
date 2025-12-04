@@ -171,23 +171,58 @@ const SubUserManagement = () => {
     setEditingId(user.$id);
     setEditForm({
       name: user.name || "",
-      permissions: user.permissions,
+      permissions: {
+        can_view: user.permissions.can_view || false,
+        can_upload: user.permissions.can_upload || false,
+        can_delete: user.permissions.can_delete || false,
+        can_manage_users: user.permissions.can_manage_users || false,
+      },
       is_active: user.is_active,
+      password: "", // Leave blank; only update if changed
     });
   };
 
   // Save Edit
   const handleSaveEdit = async (id: string) => {
     try {
+      // Get the linked sub-user record (to know authUserId)
+      const link = await databases.getDocument(DATABASE_ID, USER_LINKS, id);
+
+      const authUserId = link.authUserId;
+      if (!authUserId) {
+        throw new Error("authUserId not found for this sub-user");
+      }
+
+      // 1️⃣ Update USER_LINKS (permissions + is_active)
       await databases.updateDocument(DATABASE_ID, USER_LINKS, id, {
         permissions: editForm.permissions,
         is_active: editForm.is_active,
       });
 
+      // 2️⃣ Update Auth user if password or name is changed
+      if (editForm.password || editForm.name) {
+        const payload: any = {};
+
+        if (editForm.password && editForm.password.trim() !== "") {
+          payload.password = editForm.password;
+        }
+
+        if (editForm.name && editForm.name.trim() !== "") {
+          payload.name = editForm.name;
+        }
+
+        if (Object.keys(payload).length > 0) {
+          // Uses Admin SDK to update any user
+          await users.update(authUserId, payload);
+        }
+      }
+
       toast.success("Team member updated");
+
       setEditingId(null);
       loadSubUsers();
     } catch (error: any) {
+      console.error(error);
       toast.error(error.message || "Failed to update user");
     }
   };
