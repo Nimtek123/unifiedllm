@@ -70,16 +70,26 @@ const SubUserManagement = () => {
     }
 
     try {
+
+      let uniqueID = ID.unique();
+      const storedSession = localStorage.getItem("appwrite_session");
+       // Create a new user
+      await account.create(uniqueID, newUser.email, newUser.password, newUser.name);
+      
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("sub_users").insert({
-        parent_user_id: userData.user.id,
-        email: newUser.email,
-        name: newUser.name || null,
-        permissions: newUser.permissions,
+      const { error } = await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), {
+        parentUserId: userData.user.id
+        userId: uniqueID,
+        view: newUser.permissions["view"],
+        upload: newUser.permissions["upload"],
+        delete: newUser.permissions["delete"],
+        manage_users: newUser.permissions["manage_users"],
+        updatedAt: new Date().toISOString(),
       });
-
+      
+      
       if (error) throw error;
       toast.success("Team member added successfully");
       setShowAddForm(false);
