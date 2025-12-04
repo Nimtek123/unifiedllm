@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const ITEMS_PER_PAGE = 10;
+let subUser = false;
 
 interface DifyDocument {
   id: string;
@@ -71,7 +72,6 @@ const Documents = () => {
   const loadUserSettings = async (userId: string) => {
     try {
       let effectiveUserId = userId;
-      let subUser = false;
 
       // Check if logged-in user is a sub-user
       const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
@@ -80,8 +80,6 @@ const Documents = () => {
         effectiveUserId = teamRes.documents[0].parentUserId;
         subUser = true;
       }
-
-      setIsSubUser(subUser); // <-- set the sub-user flag
 
       // Load settings for the effective user
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
