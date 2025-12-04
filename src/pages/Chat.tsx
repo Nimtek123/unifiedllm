@@ -26,9 +26,23 @@ const Chat = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
-      const settings = response.documents.find((doc: any) => doc.userId === userId);
-      
+      let effectiveUserId = userId;
+
+      // Check if logged-in user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
+
+      if (teamRes.documents.length > 0) {
+        const subUserDoc = teamRes.documents[0];
+        effectiveUserId = teamRes.documents[0].parentUserId;
+      }
+
+      // Load settings for the effective user
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
+        Query.equal("userId", effectiveUserId),
+      ]);
+
+      const settings = response.documents.find((doc: any) => doc.userId === effectiveUserId);
+
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
         await checkDocuments(settings.datasetId, settings.apiKey);
@@ -43,11 +57,10 @@ const Chat = () => {
 
   const checkDocuments = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=1`,
-        { headers: { Authorization: `Bearer ${apiKey}` } }
-      );
-      
+      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=1`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
       if (response.ok) {
         const data = await response.json();
         setHasDocuments((data.total || data.data?.length || 0) > 0);
@@ -89,7 +102,9 @@ const Chat = () => {
               <CardDescription>Configure your API settings to use the chat feature.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => navigate("/settings")}>Go to Settings</Button>
+              <Button className="w-full" onClick={() => navigate("/settings")}>
+                Go to Settings
+              </Button>
             </CardContent>
           </Card>
         ) : !hasDocuments ? (
@@ -99,7 +114,9 @@ const Chat = () => {
                 <FileText className="w-8 h-8 text-muted-foreground" />
               </div>
               <CardTitle>No Documents Found</CardTitle>
-              <CardDescription>You need to upload at least one document before you can chat with the AI assistant.</CardDescription>
+              <CardDescription>
+                You need to upload at least one document before you can chat with the AI assistant.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Button className="w-full" onClick={() => navigate("/upload")}>
