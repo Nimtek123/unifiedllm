@@ -250,10 +250,10 @@ const SubUserManagement = () => {
         name: user.name || "",
         password: "", // Leave blank; only update if user sets new password
         permissions: {
-          can_view: user.permissions.can_view || false,
-          can_upload: user.permissions.can_upload || false,
-          can_delete: user.permissions.can_delete || false,
-          can_manage_users: user.permissions.can_manage_users || false,
+          can_view: user.can_view || false,
+          can_upload: user.can_upload || false,
+          can_delete: user.can_delete || false,
+          can_manage_users: user.can_manage_users || false,
         },
       });
     } else {
