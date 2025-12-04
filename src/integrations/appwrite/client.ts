@@ -1,4 +1,4 @@
-import { Client, Databases, Account, Storage, ID, Query, Users } from "appwrite";
+import { Client, Databases, Account, Storage, ID, Query } from "appwrite";
 
 const client = new Client();
 
@@ -127,4 +127,4 @@ export const difyApi = {
   },
 };
 
-export { client, ID, Query, Users };
+export { client, ID, Query };
