@@ -27,6 +27,7 @@ const Settings = () => {
   const [accountType, setAccountType] = useState("free");
   const [maxDocuments, setMaxDocuments] = useState(5);
   const [isAdmin, setIsAdmin] = useState(false);
+  let subuser = false;
 
   useEffect(() => {
     checkAuthAndLoadSettings();
@@ -45,6 +46,7 @@ const Settings = () => {
       if (teamRes.documents.length > 0) {
         // Use the parent user's ID for settings
         userIdToUse = teamRes.documents[0].parentUserId;
+        subuser = true;
       }
 
       // Load settings using the resolved userId
@@ -209,43 +211,47 @@ const Settings = () => {
           </Card>
 
           {/* Upgrade Account Card */}
-          <Card className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
-            <CardHeader>
-              <CardTitle>Upgrade Account</CardTitle>
-              <CardDescription>Request an upgrade to increase your document limit.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {pricingPlans.map((plan) => (
-                <div
-                  key={plan.name}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div>
-                    <h4 className="font-medium">{plan.name}</h4>
-                    <p className="text-sm text-muted-foreground">{plan.description}</p>
-                    <p className="text-sm text-muted-foreground">{plan.docs} documents</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">{plan.price}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const subject = encodeURIComponent(`Upgrade Request: ${plan.name}`);
-                        const body = encodeURIComponent(
-                          `I would like to upgrade to ${plan.name} plan.\n\nDataset ID: ${datasetId || "Not set"}\nAPI Key: ${apiKey ? "****" + apiKey.slice(-4) : "Not set"}`,
-                        );
-                        window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
-                      }}
+          {
+            !subuser(
+              <Card className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
+                <CardHeader>
+                  <CardTitle>Upgrade Account</CardTitle>
+                  <CardDescription>Request an upgrade to increase your document limit.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {pricingPlans.map((plan) => (
+                    <div
+                      key={plan.name}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <Mail className="h-4 w-4 mr-1" />
-                      Request
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                      <div>
+                        <h4 className="font-medium">{plan.name}</h4>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                        <p className="text-sm text-muted-foreground">{plan.docs} documents</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{plan.price}</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const subject = encodeURIComponent(`Upgrade Request: ${plan.name}`);
+                            const body = encodeURIComponent(
+                              `I would like to upgrade to ${plan.name} plan.\n\nDataset ID: ${datasetId || "Not set"}\nAPI Key: ${apiKey ? "****" + apiKey.slice(-4) : "Not set"}`,
+                            );
+                            window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
+                          }}
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Request
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>,
+            )
+          }
         </div>
       </main>
     </div>

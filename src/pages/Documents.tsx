@@ -70,9 +70,25 @@ const Documents = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS);
-      const settings = response.documents.find((doc: any) => doc.userId === userId);
+      let effectiveUserId = userId;
+      let subUser = false;
 
+      // Check if logged-in user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("childUserId", userId)]);
+
+      if (teamRes.documents.length > 0) {
+        effectiveUserId = teamRes.documents[0].parentUserId;
+        subUser = true;
+      }
+
+      setIsSubUser(subUser); // <-- set the sub-user flag
+
+      // Load settings for the effective user
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
+        Query.equal("userId", effectiveUserId),
+      ]);
+
+      const settings = response.documents[0];
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
         await loadDocuments(settings.datasetId, settings.apiKey);
@@ -282,6 +298,7 @@ const Documents = () => {
                                     <AlertDialogAction
                                       onClick={() => handleDelete(doc)}
                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      disabled={isSubUser} // disable delete for sub-users
                                     >
                                       Delete
                                     </AlertDialogAction>
