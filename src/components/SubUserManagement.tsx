@@ -165,7 +165,6 @@ const SubUserManagement = () => {
 
   // Edit
   const handleEdit = (user: SubUser) => {
-    console.log(user);
     setEditingId(user.$id);
     setEditForm({
       name: user.name || "",
@@ -191,13 +190,23 @@ const SubUserManagement = () => {
         throw new Error("authUserId not found for this sub-user");
       }
 
+      const canView = newUser.permissions.can_view;
+      const canUpload = newUser.permissions.can_upload;
+      const canDelete = newUser.permissions.can_delete;
+      const canManageUsers = newUser.permissions.can_manage_users;
+
       // 1️⃣ Update USER_LINKS (permissions + is_active)
       await databases.updateDocument(DATABASE_ID, USER_LINKS, id, {
-        permissions: editForm.permissions,
+        // Boolean permission fields
+        can_view: canView,
+        can_upload: canUpload,
+        can_delete: canDelete,
+        can_manage_users: canManageUsers,
         email: editForm.email,
-        name: editForm.name,
+        name: newUser.name,
       });
 
+      console.log(editForm);
       // 2️⃣ Update Auth user if password or name is changed
       if (editForm.password || editForm.name) {
         const payload: any = {};
