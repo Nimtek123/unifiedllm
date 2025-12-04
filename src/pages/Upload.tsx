@@ -50,6 +50,7 @@ const Upload = () => {
       const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
 
       if (teamRes.documents.length > 0) {
+        const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
         subUser = true;
         userPermissions = {
