@@ -11,6 +11,7 @@ const Chat = () => {
   const [hasDocuments, setHasDocuments] = useState(false);
   const [userSettings, setUserSettings] = useState<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [userId, setUserId] = useState(true);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -19,8 +20,7 @@ const Chat = () => {
   const checkAuthAndLoad = async () => {
     try {
       const user = await account.get();
-      const userId = user.$id; // Appwrite user ID
-
+      setUserId(user.$id);
       // Inject the conversation_id directly into the iframe src
       if (iframeRef.current) {
         // iframeRef.current.src = `https://dify.unified-bi.org/chatbot/LejUgszGK0FV7PVK?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`;
