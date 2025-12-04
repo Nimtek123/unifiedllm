@@ -142,7 +142,6 @@ const Chat = () => {
               <CardContent className="p-0 h-full">
                 <iframe
                   ref={iframeRef}
-                  src="https://dify.unified-bi.org/chat/LejUgszGK0FV7PVK"
                   style={{ width: "100%", height: "100%", minHeight: "700px" }}
                   frameBorder="0"
                   allow="microphone"
