@@ -59,6 +59,8 @@ const Upload = () => {
           can_delete: subUserDoc.can_delete ?? false,
           can_manage_users: subUserDoc.can_manage_users ?? false,
         };
+
+        console.log(userPermissions);
       }
 
       // Load settings for the effective user
