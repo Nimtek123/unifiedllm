@@ -23,7 +23,7 @@ const Chat = () => {
 
       // Inject the conversation_id directly into the iframe src
       if (iframeRef.current) {
-        iframeRef.current.src = `https://dify.unified-bi.org/chat/embed?user=${userId}&hide-header=true&hide-title=true`;
+        iframeRef.current.src = `https://dify.unified-bi.org/chat?user=${userId}&hide-header=true&hide-title=true`;
       }
 
       await loadUserSettings(user.$id);
