@@ -207,7 +207,7 @@ const SubUserManagement = () => {
 
         if (Object.keys(payload).length > 0) {
           // Uses Admin SDK to update any user
-          await users.update(authUserId, payload);
+          await account.update(authUserId, payload);
         }
       }
 
