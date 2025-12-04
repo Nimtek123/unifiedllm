@@ -309,7 +309,7 @@ const Dashboard = () => {
         </div>
 
         {/* Server Connection Test */}
-        <Card className="mt-8 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+        {/* <Card className="mt-8 animate-slide-up" style={{ animationDelay: "0.3s" }}>
           <CardHeader>
             <CardTitle>Server Connection</CardTitle>
             <CardDescription>Test connectivity to the backend server</CardDescription>
@@ -378,7 +378,7 @@ const Dashboard = () => {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Team Management Section */}
         <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
