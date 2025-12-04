@@ -33,10 +33,10 @@ const SubUserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState<{ email: string; name: string; permissions: PermissionType[] }>({ 
+  const [newUser, setNewUser] = useState<{ email: string; name: string; password: string; permissions: PermissionType[] }>({ 
     email: "", name: "", permissions: ["view"] 
   });
-  const [editForm, setEditForm] = useState<{ name: string; permissions: PermissionType[]; is_active: boolean }>({
+  const [editForm, setEditForm] = useState<{ name: string; password: string; permissions: PermissionType[]; is_active: boolean }>({
     name: "",
     permissions: [],
     is_active: true,
@@ -191,6 +191,11 @@ const SubUserManagement = () => {
                 placeholder="Name (optional)"
                 value={newUser.name}
                 onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+              />
+              <Input
+                placeholder="Name *"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
               />
             </div>
             <div className="mt-4">
