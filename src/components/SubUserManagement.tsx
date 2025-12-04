@@ -28,9 +28,7 @@ interface SubUser {
   name?: string;
 }
 
-const DATABASE_ID = "YOUR_DATABASE_ID";
-const USER_LINKS = "user_links";
-const USER_SETTINGS = "user_settings";
+const USER_LINKS = "team_members";
 
 const SubUserManagement = () => {
   const [subUsers, setSubUsers] = useState<SubUser[]>([]);
@@ -99,7 +97,7 @@ const SubUserManagement = () => {
       // 2️⃣ Link parent → child
       await databases.createDocument(DATABASE_ID, USER_LINKS, ID.unique(), {
         parentUserId: currentUserId,
-        childUserId: userId,
+        userId: userId,
         permissions: newUser.permissions,
         is_active: true,
       });
