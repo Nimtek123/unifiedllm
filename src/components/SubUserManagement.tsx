@@ -197,10 +197,6 @@ const SubUserManagement = () => {
     }
   };
 
-  const togglePermission = (perm: PermissionType, list: PermissionType[], setter: (v: PermissionType[]) => void) => {
-    setter(list.includes(perm) ? list.filter((p) => p !== perm) : [...list, perm]);
-  };
-
   return (
     <Card>
       <CardHeader>
