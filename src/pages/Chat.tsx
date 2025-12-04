@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasDocuments, setHasDocuments] = useState(false);
   const [userSettings, setUserSettings] = useState<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -18,6 +19,13 @@ const Chat = () => {
   const checkAuthAndLoad = async () => {
     try {
       const user = await account.get();
+      const userId = user.$id; // Appwrite user ID
+
+      // Inject the conversation_id directly into the iframe src
+      if (iframeRef.current) {
+        iframeRef.current.src = `https://dify.unified-bi.org/chat/${userId}&hide-header=true&hide-title=true`;
+      }
+
       await loadUserSettings(user.$id);
     } catch (error) {
       navigate("/auth");
@@ -134,7 +142,8 @@ const Chat = () => {
             <Card className="flex-1 overflow-hidden">
               <CardContent className="p-0 h-full">
                 <iframe
-                  src="https://dify.unified-bi.org/chat/LejUgszGK0FV7PVK?conversation_id=34232"
+                  ref={iframeRef}
+                  src="https://dify.unified-bi.org/chat/LejUgszGK0FV7PVK"
                   style={{ width: "100%", height: "100%", minHeight: "700px" }}
                   frameBorder="0"
                   allow="microphone"
