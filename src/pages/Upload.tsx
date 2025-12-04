@@ -65,13 +65,14 @@ const Upload = () => {
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
         Query.equal("userId", effectiveUserId),
       ]);
-      console.log(response);
 
       const settings = response.documents.find((doc: any) => doc.userId === userId);
 
       if (settings?.datasetId && settings?.apiKey) {
         setUserSettings(settings);
         setMaxDocuments(settings.maxDocuments || 5);
+
+        console.log(userSettings);
         await loadDocuments(settings.datasetId, settings.apiKey);
       } else {
         setIsLoading(false);
