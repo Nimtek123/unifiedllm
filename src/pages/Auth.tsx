@@ -99,7 +99,8 @@ const Auth = () => {
           email,
         }),
       );
-
+      // Set the session cookie domain manually if needed
+      document.cookie = `a_session_${projectId}=${session.secret}; path=/; domain=.unified-bi.org; secure; samesite=none`;
       toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error: any) {
