@@ -264,18 +264,32 @@ const Upload = () => {
                 {!canUpload || !userPermissions.can_upload ? (
                   <div className="border-2 border-dashed rounded-lg p-8 text-center border-destructive/50 bg-destructive/5">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-                    {!canUpload ? (
-                      <p className="text-sm font-medium mb-1 text-destructive">Upload Limit Reached</p>
+                    {/* Case 1 — User has NO upload permissions */}
+                    {!userPermissions.can_upload ? (
+                      <>
+                        <p className="text-sm font-medium mb-1 text-destructive">No permissions to upload</p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Your administrator has disabled uploads for your account.
+                        </p>
+                      </>
                     ) : (
-                      <p className="text-sm font-medium mb-1 text-destructive">No permissions to upload</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mb-4">
-                      You've reached your document limit of {maxDocuments} files.
-                    </p>
+                      <>
+                        {/* Case 2 — User CAN upload but reached limit */}
+                        {!canUpload && (
+                          <>
+                            <p className="text-sm font-medium mb-1 text-destructive">Upload Limit Reached</p>
 
-                    <Button variant="outline" onClick={() => navigate("/settings")}>
-                      Upgrade Account
-                    </Button>
+                            <p className="text-xs text-muted-foreground mb-4">
+                              You've reached your document limit of {maxDocuments} files.
+                            </p>
+
+                            <Button variant="outline" onClick={() => navigate("/settings")}>
+                              Upgrade Account
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 ) : (
                   <>
