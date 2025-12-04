@@ -5,22 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Trash2, Edit2, Save, X, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { account, ID } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
 
 type PermissionType = "view" | "upload" | "delete" | "manage_users";
-
-interface SubUser {
-  id: string;
-  parent_user_id: string;
-  email: string;
-  name: string | null;
-  permissions: PermissionType[];
-  is_active: boolean;
-  created_at: string;
-}
 
 const PERMISSIONS: { value: PermissionType; label: string }[] = [
   { value: "view", label: "View Documents" },
@@ -29,42 +18,64 @@ const PERMISSIONS: { value: PermissionType; label: string }[] = [
   { value: "manage_users", label: "Manage Users" },
 ];
 
+interface SubUser {
+  $id: string;
+  childUserId: string;
+  parentUserId: string;
+  permissions: PermissionType[];
+  is_active: boolean;
+  email?: string;
+  name?: string;
+}
+
+const DATABASE_ID = "YOUR_DATABASE_ID";
+const USER_LINKS = "user_links";
+const USER_SETTINGS = "user_settings";
+
 const SubUserManagement = () => {
   const [subUsers, setSubUsers] = useState<SubUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newUser, setNewUser] = useState<{
-    email: string;
-    name: string;
-    password: string;
-    permissions: PermissionType[];
-  }>({
+
+  const [newUser, setNewUser] = useState({
     email: "",
     name: "",
-    permissions: ["view"],
+    password: "",
+    permissions: ["view"] as PermissionType[],
   });
-  const [editForm, setEditForm] = useState<{
-    name: string;
-    password: string;
-    permissions: PermissionType[];
-    is_active: boolean;
-  }>({
+
+  const [editForm, setEditForm] = useState({
     name: "",
-    permissions: [],
+    permissions: [] as PermissionType[],
     is_active: true,
   });
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Load current user
   useEffect(() => {
-    loadSubUsers();
+    (async () => {
+      try {
+        const user = await account.get();
+        setCurrentUserId(user.$id);
+      } catch {
+        toast.error("Not authenticated");
+      }
+    })();
   }, []);
+
+  // Load Sub Users
+  useEffect(() => {
+    if (!currentUserId) return;
+    loadSubUsers();
+  }, [currentUserId]);
 
   const loadSubUsers = async () => {
     try {
-      const { data, error } = await supabase.from("sub_users").select("*").order("created_at", { ascending: false });
+      const res = await databases.listDocuments(DATABASE_ID, USER_LINKS, [Query.equal("parentUserId", currentUserId)]);
 
-      if (error) throw error;
-      setSubUsers(data || []);
+      setSubUsers(res.documents);
     } catch (error: any) {
       toast.error("Failed to load team members");
       console.error(error);
@@ -73,43 +84,40 @@ const SubUserManagement = () => {
     }
   };
 
+  // Add Sub User
   const handleAddUser = async () => {
-    if (!newUser.email) {
-      toast.error("Email is required");
+    if (!newUser.email || !newUser.password) {
+      toast.error("Email & password required");
       return;
     }
 
     try {
-      let uniqueID = ID.unique();
-      const storedSession = localStorage.getItem("appwrite_session");
-      // Create a new user
-      await account.create(uniqueID, newUser.email, newUser.password, newUser.name);
+      // 1️⃣ Create sub-user auth account
+      const userId = ID.unique();
+      await account.create(userId, newUser.email, newUser.password, newUser.name);
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Not authenticated");
-
-      const { error } = await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), {
-        parentUserId: userData.user.id,
-        userId: uniqueID,
-        view: newUser.permissions["view"],
-        upload: newUser.permissions["upload"],
-        delete: newUser.permissions["delete"],
-        manage_users: newUser.permissions["manage_users"],
-        updatedAt: new Date().toISOString(),
+      // 2️⃣ Link parent → child
+      await databases.createDocument(DATABASE_ID, USER_LINKS, ID.unique(), {
+        parentUserId: currentUserId,
+        childUserId: userId,
+        permissions: newUser.permissions,
+        is_active: true,
       });
 
-      if (error) throw error;
       toast.success("Team member added successfully");
       setShowAddForm(false);
-      setNewUser({ email: "", name: "", permissions: ["view"] });
+      setNewUser({ email: "", name: "", password: "", permissions: ["view"] });
+
       loadSubUsers();
     } catch (error: any) {
-      toast.error(error.message || "Failed to add team member");
+      console.error(error);
+      toast.error(error.message || "Failed to add sub user");
     }
   };
 
+  // Edit
   const handleEdit = (user: SubUser) => {
-    setEditingId(user.id);
+    setEditingId(user.$id);
     setEditForm({
       name: user.name || "",
       permissions: user.permissions,
@@ -117,233 +125,145 @@ const SubUserManagement = () => {
     });
   };
 
+  // Save Edit
   const handleSaveEdit = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("sub_users")
-        .update({
-          name: editForm.name || null,
-          permissions: editForm.permissions,
-          is_active: editForm.is_active,
-        })
-        .eq("id", id);
+      await databases.updateDocument(DATABASE_ID, USER_LINKS, id, {
+        permissions: editForm.permissions,
+        is_active: editForm.is_active,
+      });
 
-      if (error) throw error;
       toast.success("Team member updated");
       setEditingId(null);
       loadSubUsers();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update team member");
+      toast.error(error.message || "Failed to update user");
     }
   };
 
+  // Delete
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this team member?")) return;
+    if (!confirm("Remove this team member?")) return;
 
     try {
-      const { error } = await supabase.from("sub_users").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Team member removed");
+      await databases.deleteDocument(DATABASE_ID, USER_LINKS, id);
+
+      toast.success("Deleted");
       loadSubUsers();
     } catch (error: any) {
-      toast.error(error.message || "Failed to remove team member");
+      toast.error(error.message || "Failed to delete");
     }
   };
 
-  const togglePermission = (
-    permission: PermissionType,
-    current: PermissionType[],
-    setter: (perms: PermissionType[]) => void,
-  ) => {
-    if (current.includes(permission)) {
-      setter(current.filter((p) => p !== permission));
-    } else {
-      setter([...current, permission]);
-    }
+  const togglePermission = (perm: PermissionType, list: PermissionType[], setter: (v: PermissionType[]) => void) => {
+    setter(list.includes(perm) ? list.filter((p) => p !== perm) : [...list, perm]);
   };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Users className="h-6 w-6 text-primary" />
-            <div>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>Manage sub-users and their permissions</CardDescription>
-            </div>
-          </div>
-          <Button onClick={() => setShowAddForm(true)} size="sm">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add Member
-          </Button>
-        </div>
+        <CardTitle>
+          <Users className="inline w-5 h-5 mr-2" /> Team Members
+        </CardTitle>
+        <CardDescription>Manage sub-user access and permissions</CardDescription>
       </CardHeader>
+
       <CardContent>
+        {/* Add User Form */}
         {showAddForm && (
-          <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-            <h4 className="font-medium mb-4">Add New Team Member</h4>
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="mb-6 p-4 border rounded-xl bg-muted/20">
+            <h3 className="font-medium mb-2">Add Team Member</h3>
+            <div className="grid gap-3">
               <Input
-                placeholder="Email *"
+                placeholder="Email"
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
               />
               <Input
-                placeholder="Name (optional)"
+                placeholder="Name"
                 value={newUser.name}
                 onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
               />
               <Input
-                placeholder="Password *"
+                placeholder="Password"
+                type="password"
                 value={newUser.password}
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
               />
-            </div>
-            <div className="mt-4">
-              <p className="text-sm font-medium mb-2">Permissions</p>
-              <div className="flex flex-wrap gap-4">
-                {PERMISSIONS.map((perm) => (
-                  <label key={perm.value} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={newUser.permissions.includes(perm.value)}
-                      onCheckedChange={() =>
-                        togglePermission(perm.value, newUser.permissions, (perms) =>
-                          setNewUser({ ...newUser, permissions: perms }),
-                        )
-                      }
-                    />
-                    {perm.label}
-                  </label>
-                ))}
+
+              <div>
+                <label className="font-medium">Permissions:</label>
+                <div className="flex gap-3 mt-2 flex-wrap">
+                  {PERMISSIONS.map((p) => (
+                    <div key={p.value} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={newUser.permissions.includes(p.value)}
+                        onCheckedChange={() =>
+                          togglePermission(p.value, newUser.permissions, (perms) =>
+                            setNewUser((u) => ({ ...u, permissions: perms })),
+                          )
+                        }
+                      />
+                      {p.label}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button onClick={handleAddUser}>Add Member</Button>
-              <Button variant="outline" onClick={() => setShowAddForm(false)}>
-                Cancel
-              </Button>
+
+              <Button onClick={handleAddUser}>Add User</Button>
             </div>
           </div>
         )}
 
-        {subUsers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No team members yet</p>
-            <p className="text-sm">Add sub-users to manage document access</p>
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {subUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.email}</TableCell>
-                    <TableCell>
-                      {editingId === user.id ? (
-                        <Input
-                          value={editForm.name}
-                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                          className="h-8 w-32"
-                        />
-                      ) : (
-                        user.name || "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === user.id ? (
-                        <div className="flex flex-wrap gap-2">
-                          {PERMISSIONS.map((perm) => (
-                            <label key={perm.value} className="flex items-center gap-1 text-xs">
-                              <Checkbox
-                                checked={editForm.permissions.includes(perm.value)}
-                                onCheckedChange={() =>
-                                  togglePermission(perm.value, editForm.permissions, (perms) =>
-                                    setEditForm({ ...editForm, permissions: perms }),
-                                  )
-                                }
-                              />
-                              {perm.label}
-                            </label>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {user.permissions.map((p) => (
-                            <Badge key={p} variant="secondary" className="text-xs">
-                              {p}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === user.id ? (
-                        <label className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={editForm.is_active}
-                            onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked as boolean })}
-                          />
-                          Active
-                        </label>
-                      ) : (
-                        <Badge variant={user.is_active ? "default" : "secondary"}>
-                          {user.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {editingId === user.id ? (
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => handleSaveEdit(user.id)}>
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => handleEdit(user)}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => handleDelete(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        {/* Table */}
+        <Button className="mb-4" onClick={() => setShowAddForm(!showAddForm)}>
+          <UserPlus className="mr-2 h-4 w-4" /> Add Sub User
+        </Button>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Permissions</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {subUsers.map((user) => (
+              <TableRow key={user.$id}>
+                <TableCell>{user.email}</TableCell>
+
+                <TableCell>
+                  {user.permissions.map((p) => (
+                    <Badge key={p} className="mr-1">
+                      {p}
+                    </Badge>
+                  ))}
+                </TableCell>
+
+                <TableCell>
+                  {user.is_active ? (
+                    <Badge variant="default">Active</Badge>
+                  ) : (
+                    <Badge variant="destructive">Disabled</Badge>
+                  )}
+                </TableCell>
+
+                <TableCell className="flex gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => handleEdit(user)}>
+                    <Edit2 size={14} />
+                  </Button>
+
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(user.$id)}>
+                    <Trash2 size={14} />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
