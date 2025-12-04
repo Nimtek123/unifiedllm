@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { UserPlus, Trash2, Edit2, Save, X, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
+import { account, databases, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
 
 type PermissionType = "view" | "upload" | "delete" | "manage_users";
 
