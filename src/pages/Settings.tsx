@@ -227,63 +227,61 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* API Configuration Card - Admin Only */}
-          {isAdmin && (
-            <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-              <CardHeader>
-                <CardTitle>Dify Configuration</CardTitle>
-                <CardDescription>Enter your Dataset ID and API Key from Dify.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <Alert className="border-amber-500/50 bg-amber-500/10">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    To prevent API abuse, protect your API Key.
-                  </AlertDescription>
-                </Alert>
+          {/* API Configuration Card - Available to all users */}
+          <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <CardHeader>
+              <CardTitle>API Configuration</CardTitle>
+              <CardDescription>Enter your Dataset ID and API Key from Dify to connect your knowledge base.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Alert className="border-amber-500/50 bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700 dark:text-amber-300">
+                  Don't have API credentials? Use the "Request Free Keys" button above to get started.
+                </AlertDescription>
+              </Alert>
 
-                <div className="space-y-2">
-                  <Label htmlFor="datasetId">Dataset ID</Label>
+              <div className="space-y-2">
+                <Label htmlFor="datasetId">Dataset ID</Label>
+                <Input
+                  id="datasetId"
+                  value={datasetId}
+                  onChange={(e) => setDatasetId(e.target.value)}
+                  placeholder="e.g., d0351bfd-defa-443f-8d77-c5d5b5eff704"
+                />
+                <p className="text-sm text-muted-foreground">Your unique dataset identifier from Dify.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apiKey">API Key</Label>
+                <div className="relative">
                   <Input
-                    id="datasetId"
-                    value={datasetId}
-                    onChange={(e) => setDatasetId(e.target.value)}
-                    placeholder="e.g., d0351bfd-defa-443f-8d77-c5d5b5eff704"
+                    id="apiKey"
+                    type={showApiKey ? "text" : "password"}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="e.g., dataset-IqgHiXUlyi1giWH3hCZvvdT7"
+                    className="pr-10"
                   />
-                  <p className="text-sm text-muted-foreground">Your unique dataset identifier from Dify.</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                  >
+                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
+                <p className="text-sm text-muted-foreground">Your API key is stored securely.</p>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">API Key</Label>
-                  <div className="relative">
-                    <Input
-                      id="apiKey"
-                      type={showApiKey ? "text" : "password"}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="e.g., dataset-IqgHiXUlyi1giWH3hCZvvdT7"
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
-                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Your API key is stored securely.</p>
-                </div>
-
-                <Button onClick={handleSave} disabled={saving} className="w-full">
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? "Saving..." : "Save Settings"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+              <Button onClick={handleSave} disabled={saving} className="w-full">
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Settings"}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
