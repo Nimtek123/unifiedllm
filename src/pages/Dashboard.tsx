@@ -57,7 +57,7 @@ const Dashboard = () => {
           // Try to create session with stored credentials
           const newSession = await account.createEmailPasswordSession(
             sessionData.email,
-            "", // You'll need to store password securely or use different approach
+            sessionData.password, // You'll need to store password securely or use different approach
           );
 
           // Retry account.get() with new session
