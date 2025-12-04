@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const ITEMS_PER_PAGE = 10;
-let subUser = false;
 
 interface DifyDocument {
   id: string;
@@ -40,6 +39,13 @@ const Documents = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [userSettings, setUserSettings] = useState<any>(null);
+  const [userPermissions, setUserPermissions] = useState({
+    can_view: true,
+    can_upload: false,
+    can_delete: false,
+    can_manage_users: false,
+  });
+  let subUser = false;
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -77,8 +83,15 @@ const Documents = () => {
       const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
 
       if (teamRes.documents.length > 0) {
+        const subUserDoc = teamRes.documents[0];
         effectiveUserId = teamRes.documents[0].parentUserId;
         subUser = true;
+        setUserPermissions({
+          can_view: subUserDoc.can_view,
+          can_upload: subUserDoc.can_upload,
+          can_delete: subUserDoc.can_delete,
+          can_manage_users: subUserDoc.can_manage_users,
+        });
       }
 
       // Load settings for the effective user
@@ -271,18 +284,21 @@ const Documents = () => {
                             <TableCell className="text-right">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                    disabled={deletingId === doc.id}
-                                  >
-                                    {deletingId === doc.id ? (
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="w-4 h-4" />
-                                    )}
-                                  </Button>
+                                  {userPermissions.can_delete ||
+                                    (!subUser && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        disabled={deletingId === doc.id}
+                                      >
+                                        {deletingId === doc.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4" />
+                                        )}
+                                      </Button>
+                                    ))}
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
@@ -296,7 +312,6 @@ const Documents = () => {
                                     <AlertDialogAction
                                       onClick={() => handleDelete(doc)}
                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      disabled={subUser} // disable delete for sub-users
                                     >
                                       Delete
                                     </AlertDialogAction>

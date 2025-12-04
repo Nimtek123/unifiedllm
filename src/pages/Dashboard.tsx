@@ -135,8 +135,6 @@ const Dashboard = () => {
     }
   };
 
-  console.log(subUser);
-
   const handleSignOut = async () => {
     try {
       await account.deleteSession("current");
