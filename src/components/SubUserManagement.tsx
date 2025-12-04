@@ -363,7 +363,25 @@ const SubUserManagement = () => {
                 </div>
               </div>
 
-              <Button onClick={handleAddUser}>Add User</Button>
+              <Button
+                onClick={async () => {
+                  if (editingId) {
+                    await handleSaveEdit(editingId);
+                  } else {
+                    await handleAddUser();
+                  }
+                }}
+              >
+                {editingId ? (
+                  <>
+                    <Save className="mr-2 h-4 w-4" /> Save Changes
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" /> Add User
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         )}
