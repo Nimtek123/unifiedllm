@@ -99,7 +99,6 @@ const SubUserManagement = () => {
         parentUserId: currentUserId,
         userId: userId,
         permissions: newUser.permissions,
-        is_active: true,
       });
 
       toast.success("Team member added successfully");
