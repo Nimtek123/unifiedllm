@@ -106,9 +106,18 @@ const SubUserManagement = () => {
 
   const loadSubUsers = async () => {
     try {
-      const res = await databases.listDocuments(DATABASE_ID, USER_LINKS, [Query.equal("parentUserId", currentUserId)]);
+      const members = await databases.listDocuments(DATABASE_ID, USER_LINKS, [
+        Query.equal("parentUserId", currentUserId),
+      ]);
 
-      setSubUsers(res.documents);
+      const users = await Promise.all(members.documents.map((link) => account.get(member.userId)));
+
+      const subUsers = members.documents.map((link, idx) => ({
+        ...link,
+        email: users[idx].email,
+      }));
+
+      setSubUsers(subUsers);
     } catch (error: any) {
       toast.error("Failed to load team members");
       console.error(error);
