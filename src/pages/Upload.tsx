@@ -7,7 +7,7 @@ import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X } from "
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
 
 const Upload = () => {
   const navigate = useNavigate();
