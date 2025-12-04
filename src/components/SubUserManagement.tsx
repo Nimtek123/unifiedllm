@@ -199,12 +199,12 @@ const SubUserManagement = () => {
 
         if (newUser.password && newUser.password.trim() !== "") {
           payload.password = newUser.password;
-          await account.updatePassword(newName);
+          await account.updatePassword(newUser.password);
         }
 
         if (newUser.name && newUser.name.trim() !== "") {
           payload.name = newUser.name;
-          await account.updateName(newName);
+          await account.updateName(newUser.name);
         }
       }
 
