@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { UserPlus, Trash2, Edit2, Save, X, Users } from "lucide-react";
+import { UserPlus, Trash2, Edit2, Save, X, Users, Bot } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Query, account, databases, DATABASE_ID, ID } from "@/integrations/appwrite/client";
+import { supabase } from "@/integrations/supabase/client";
 
 type PermissionType = "view" | "upload" | "delete" | "manage_users";
 
@@ -30,13 +31,22 @@ interface SubUser {
   name?: string;
 }
 
+interface LLMOption {
+  $id: string;
+  llmId: string;
+  llmName: string;
+}
+
 const USER_LINKS = "team_members";
+const LLM_LIST_COLLECTION = "llm_list";
 
 const SubUserManagement = () => {
   const [subUsers, setSubUsers] = useState<SubUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [availableLLMs, setAvailableLLMs] = useState<LLMOption[]>([]);
+  const [userLLMAssignments, setUserLLMAssignments] = useState<Record<string, string[]>>({});
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -48,6 +58,7 @@ const SubUserManagement = () => {
       can_delete: false,
       can_manage_users: false,
     },
+    assignedLLMs: [] as string[],
   });
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -64,7 +75,30 @@ const SubUserManagement = () => {
     })();
   }, []);
 
-  // Load Sub Users
+  // Load available LLMs from Appwrite
+  useEffect(() => {
+    if (!currentUserId) return;
+    loadAvailableLLMs();
+  }, [currentUserId]);
+
+  const loadAvailableLLMs = async () => {
+    try {
+      const llms = await databases.listDocuments(DATABASE_ID, LLM_LIST_COLLECTION, [
+        Query.equal("userId", currentUserId),
+      ]);
+      setAvailableLLMs(
+        llms.documents.map((doc: any) => ({
+          $id: doc.$id,
+          llmId: doc.llmId,
+          llmName: doc.llmName,
+        }))
+      );
+    } catch (error: any) {
+      console.error("Failed to load LLMs:", error);
+    }
+  };
+
+  // Load Sub Users and their LLM assignments
   useEffect(() => {
     if (!currentUserId) return;
     loadSubUsers();
@@ -76,12 +110,51 @@ const SubUserManagement = () => {
         Query.equal("parentUserId", currentUserId),
       ]);
 
-      setSubUsers(members.documents as unknown as SubUser[]);
+      const users = members.documents as unknown as SubUser[];
+      setSubUsers(users);
+
+      // Load LLM assignments for each sub-user from Supabase
+      const assignments: Record<string, string[]> = {};
+      for (const user of users) {
+        const { data } = await supabase
+          .from("llm_list")
+          .select("llm_id, llm_name")
+          .eq("user_id", user.userId);
+        
+        if (data && data.length > 0) {
+          assignments[user.userId] = data.map((d) => d.llm_id);
+        }
+      }
+      setUserLLMAssignments(assignments);
     } catch (error: any) {
       toast.error("Failed to load team members");
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Save LLM assignments to Supabase
+  const saveLLMAssignments = async (userId: string, llmIds: string[]) => {
+    try {
+      // First delete existing assignments for this user
+      await supabase.from("llm_list").delete().eq("user_id", userId);
+
+      // Insert new assignments
+      if (llmIds.length > 0) {
+        const assignments = llmIds.map((llmId) => {
+          const llm = availableLLMs.find((l) => l.llmId === llmId);
+          return {
+            user_id: userId,
+            llm_id: llmId,
+            llm_name: llm?.llmName || llmId,
+          };
+        });
+        await supabase.from("llm_list").insert(assignments);
+      }
+    } catch (error: any) {
+      console.error("Failed to save LLM assignments:", error);
+      throw error;
     }
   };
 
@@ -114,6 +187,11 @@ const SubUserManagement = () => {
         can_manage_users: canManageUsers,
       });
 
+      // 3️⃣ Save LLM assignments
+      if (newUser.assignedLLMs.length > 0) {
+        await saveLLMAssignments(userId, newUser.assignedLLMs);
+      }
+
       toast.success("Team member added successfully");
       setShowAddForm(false);
       setNewUser({
@@ -126,6 +204,7 @@ const SubUserManagement = () => {
           can_delete: false,
           can_manage_users: false,
         },
+        assignedLLMs: [],
       });
 
       loadSubUsers();
@@ -161,6 +240,9 @@ const SubUserManagement = () => {
         name: newUser.name,
       });
 
+      // Update LLM assignments
+      await saveLLMAssignments(authUserId, newUser.assignedLLMs);
+
       toast.success("Team member updated");
       setShowAddForm(false);
       setNewUser({
@@ -173,6 +255,7 @@ const SubUserManagement = () => {
           can_delete: false,
           can_manage_users: false,
         },
+        assignedLLMs: [],
       });
 
       setEditingId(null);
@@ -199,7 +282,8 @@ const SubUserManagement = () => {
   // Open form for adding or editing
   const openForm = (user?: SubUser) => {
     if (user) {
-      // Editing existing user
+      // Editing existing user - load their LLM assignments
+      const userLLMs = userLLMAssignments[user.userId] || [];
       setEditingId(user.$id);
       setNewUser({
         email: user.email || "",
@@ -211,6 +295,7 @@ const SubUserManagement = () => {
           can_delete: user.can_delete || false,
           can_manage_users: user.can_manage_users || false,
         },
+        assignedLLMs: userLLMs,
       });
     } else {
       // Adding new user
@@ -225,10 +310,23 @@ const SubUserManagement = () => {
           can_delete: false,
           can_manage_users: false,
         },
+        assignedLLMs: [],
       });
     }
 
     setShowAddForm(true);
+  };
+
+  const toggleLLMAssignment = (llmId: string) => {
+    setNewUser((u) => {
+      const isAssigned = u.assignedLLMs.includes(llmId);
+      return {
+        ...u,
+        assignedLLMs: isAssigned
+          ? u.assignedLLMs.filter((id) => id !== llmId)
+          : [...u.assignedLLMs, llmId],
+      };
+    });
   };
 
   return (
@@ -324,6 +422,30 @@ const SubUserManagement = () => {
                 </div>
               </div>
 
+              {/* LLM Assignment Multi-Select */}
+              <div>
+                <label className="font-medium flex items-center gap-2">
+                  <Bot className="w-4 h-4" /> Assign LLMs:
+                </label>
+                {availableLLMs.length > 0 ? (
+                  <div className="flex gap-3 mt-2 flex-wrap">
+                    {availableLLMs.map((llm) => (
+                      <div key={llm.$id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={newUser.assignedLLMs.includes(llm.llmId)}
+                          onCheckedChange={() => toggleLLMAssignment(llm.llmId)}
+                        />
+                        <span className="text-sm">{llm.llmName}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    No LLMs available. Add LLMs in the Admin panel first.
+                  </p>
+                )}
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   onClick={async () => {
@@ -365,34 +487,50 @@ const SubUserManagement = () => {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Permissions</TableHead>
+              <TableHead>Assigned LLMs</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {subUsers.map((user) => (
-              <TableRow key={user.$id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+            {subUsers.map((user) => {
+              const assignedLLMIds = userLLMAssignments[user.userId] || [];
+              const assignedLLMNames = assignedLLMIds
+                .map((id) => availableLLMs.find((l) => l.llmId === id)?.llmName || id)
+                .join(", ");
 
-                <TableCell>
-                  {user.can_view && <Badge className="mr-1">View</Badge>}
-                  {user.can_upload && <Badge className="mr-1">Upload</Badge>}
-                  {user.can_delete && <Badge className="mr-1">Delete</Badge>}
-                  {user.can_manage_users && <Badge className="mr-1">Manage Users</Badge>}
-                </TableCell>
+              return (
+                <TableRow key={user.$id}>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
 
-                <TableCell className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => openForm(user)}>
-                    <Edit2 size={14} />
-                  </Button>
+                  <TableCell>
+                    {user.can_view && <Badge className="mr-1">View</Badge>}
+                    {user.can_upload && <Badge className="mr-1">Upload</Badge>}
+                    {user.can_delete && <Badge className="mr-1">Delete</Badge>}
+                    {user.can_manage_users && <Badge className="mr-1">Manage Users</Badge>}
+                  </TableCell>
 
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(user.$id)}>
-                    <Trash2 size={14} />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                  <TableCell>
+                    {assignedLLMNames ? (
+                      <span className="text-sm">{assignedLLMNames}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">None</span>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => openForm(user)}>
+                      <Edit2 size={14} />
+                    </Button>
+
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(user.$id)}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
