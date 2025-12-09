@@ -117,7 +117,7 @@ const SubUserManagement = () => {
       const assignments: Record<string, string[]> = {};
 
       for (const user of users) {
-        const { documents } = await databases.listDocuments(DATABASE_ID, "llm_assignments", [
+        const { documents } = await databases.listDocuments(DATABASE_ID, "llm_list", [
           Query.equal("userId", user.userId),
         ]);
 
