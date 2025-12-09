@@ -24,8 +24,8 @@ interface UserSettings {
 
 interface LLMItem {
   id: string;
-  user_id: string;
-  llm_id: string;
+  userId: string;
+  llmId: string;
   llm_name: string;
   created_at: string;
 }
@@ -67,13 +67,13 @@ const Admin = () => {
     try {
       const user = await account.get();
       const labels = user.labels || [];
-      
+
       if (!labels.includes("admin")) {
         toast.error("Access denied. Admin privileges required.");
         navigate("/dashboard");
         return;
       }
-      
+
       setIsAdmin(true);
       await Promise.all([loadUserSettings(), loadLlmList()]);
     } catch (error: any) {
@@ -100,10 +100,7 @@ const Admin = () => {
 
   const loadLlmList = async () => {
     try {
-      const { data, error } = await supabase
-        .from("llm_list")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("llm_list").select("*").order("created_at", { ascending: false });
 
       if (error) throw error;
       setLlmList(data || []);
@@ -146,7 +143,7 @@ const Admin = () => {
 
   const handleDelete = async (docId: string) => {
     if (!confirm("Are you sure you want to delete this user's settings?")) return;
-    
+
     try {
       await appwriteDb.deleteDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, docId);
       toast.success("User settings deleted successfully");
@@ -189,8 +186,8 @@ const Admin = () => {
 
     try {
       const { error } = await supabase.from("llm_list").insert({
-        user_id: newLlmForm.userId,
-        llm_id: newLlmForm.llmId,
+        userId: newLlmForm.userId,
+        llmId: newLlmForm.llmId,
         llm_name: newLlmForm.llmName,
       });
 
@@ -208,7 +205,7 @@ const Admin = () => {
   const handleEditLlm = (llm: LLMItem) => {
     setEditingLlmId(llm.id);
     setEditLlmForm({
-      llm_id: llm.llm_id,
+      llmId: llm.llmId,
       llm_name: llm.llm_name,
     });
   };
@@ -218,7 +215,7 @@ const Admin = () => {
       const { error } = await supabase
         .from("llm_list")
         .update({
-          llm_id: editLlmForm.llm_id,
+          llmId: editLlmForm.llmId,
           llm_name: editLlmForm.llm_name,
         })
         .eq("id", llmId);
@@ -252,14 +249,14 @@ const Admin = () => {
   const filteredSettings = userSettings.filter(
     (settings) =>
       settings.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      settings.datasetId?.toLowerCase().includes(searchTerm.toLowerCase())
+      settings.datasetId?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const filteredLlmList = llmList.filter(
     (llm) =>
-      llm.user_id?.toLowerCase().includes(llmSearchTerm.toLowerCase()) ||
+      llm.userId?.toLowerCase().includes(llmSearchTerm.toLowerCase()) ||
       llm.llm_name?.toLowerCase().includes(llmSearchTerm.toLowerCase()) ||
-      llm.llm_id?.toLowerCase().includes(llmSearchTerm.toLowerCase())
+      llm.llmId?.toLowerCase().includes(llmSearchTerm.toLowerCase()),
   );
 
   const getAccountBadge = (accountType: string | null) => {
@@ -369,9 +366,7 @@ const Admin = () => {
                       ) : (
                         filteredSettings.map((settings) => (
                           <TableRow key={settings.$id}>
-                            <TableCell className="font-mono text-xs">
-                              {settings.userId?.substring(0, 12)}...
-                            </TableCell>
+                            <TableCell className="font-mono text-xs">{settings.userId?.substring(0, 12)}...</TableCell>
                             <TableCell>
                               {editingId === settings.$id ? (
                                 <Input
@@ -469,9 +464,7 @@ const Admin = () => {
                   </Table>
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-4">
-                  Total users: {filteredSettings.length}
-                </p>
+                <p className="text-sm text-muted-foreground mt-4">Total users: {filteredSettings.length}</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -523,18 +516,16 @@ const Admin = () => {
                       ) : (
                         filteredLlmList.map((llm) => (
                           <TableRow key={llm.id}>
-                            <TableCell className="font-mono text-xs">
-                              {llm.user_id?.substring(0, 12)}...
-                            </TableCell>
+                            <TableCell className="font-mono text-xs">{llm.userId?.substring(0, 12)}...</TableCell>
                             <TableCell>
                               {editingLlmId === llm.id ? (
                                 <Input
-                                  value={editLlmForm.llm_id || ""}
-                                  onChange={(e) => setEditLlmForm({ ...editLlmForm, llm_id: e.target.value })}
+                                  value={editLlmForm.llmId || ""}
+                                  onChange={(e) => setEditLlmForm({ ...editLlmForm, llmId: e.target.value })}
                                   className="h-8"
                                 />
                               ) : (
-                                <span className="font-mono text-xs">{llm.llm_id}</span>
+                                <span className="font-mono text-xs">{llm.llmId}</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -557,7 +548,14 @@ const Admin = () => {
                                   <Button size="sm" variant="ghost" onClick={() => handleSaveLlmEdit(llm.id)}>
                                     <Save className="h-4 w-4" />
                                   </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => { setEditingLlmId(null); setEditLlmForm({}); }}>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingLlmId(null);
+                                      setEditLlmForm({});
+                                    }}
+                                  >
                                     <X className="h-4 w-4" />
                                   </Button>
                                 </div>
@@ -584,9 +582,7 @@ const Admin = () => {
                   </Table>
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-4">
-                  Total LLM assignments: {filteredLlmList.length}
-                </p>
+                <p className="text-sm text-muted-foreground mt-4">Total LLM assignments: {filteredLlmList.length}</p>
               </CardContent>
             </Card>
           </TabsContent>
