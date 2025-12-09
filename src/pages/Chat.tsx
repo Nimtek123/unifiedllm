@@ -56,8 +56,8 @@ const Chat = () => {
       const llmList = await appwriteDb.listDocuments(DATABASE_ID, "llm_list", [Query.equal("userId", currentUserId)]);
 
       setLlmList(llmList.documents || []);
-      if (data && data.length > 0) {
-        setSelectedLlm(data[0].llm_id);
+      if (llmList.documents && llmList.documents.length > 0) {
+        setSelectedLlm(llmList.documents[0].llmId);
       }
     } catch (error) {
       console.error("Error loading LLM list:", error);
