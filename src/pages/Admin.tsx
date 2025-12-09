@@ -184,13 +184,12 @@ const Admin = () => {
     }
 
     try {
-      const { error } = await supabase.from("llm_list").insert({
+      await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.LLM_LIST, ID.unique(), {
         userId: newLlmForm.userId,
         llmId: newLlmForm.llmId,
         llm_name: newLlmForm.llmName,
+        createdAt: new Date().toISOString(),
       });
-
-      if (error) throw error;
 
       toast.success("LLM assignment created successfully");
       setShowLlmModal(false);
