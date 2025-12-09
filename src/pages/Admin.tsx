@@ -103,7 +103,7 @@ const Admin = () => {
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.LLM_LIST);
 
       if (error) throw error;
-      setLlmList(response || []);
+      setLlmList(response.documents);
     } catch (error: any) {
       toast.error("Failed to load LLM list");
       console.error(error);
