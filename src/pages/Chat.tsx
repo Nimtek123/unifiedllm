@@ -2,8 +2,17 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, FileText, Upload, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Upload, AlertCircle, Bot } from "lucide-react";
 import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface LLMItem {
+  id: string;
+  user_id: string;
+  llm_id: string;
+  llm_name: string;
+}
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -11,7 +20,9 @@ const Chat = () => {
   const [hasDocuments, setHasDocuments] = useState(false);
   const [userSettings, setUserSettings] = useState<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [userId, setUserId] = useState(true);
+  const [userId, setUserId] = useState<string>("");
+  const [llmList, setLlmList] = useState<LLMItem[]>([]);
+  const [selectedLlm, setSelectedLlm] = useState<string>("");
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -21,25 +32,52 @@ const Chat = () => {
     try {
       const user = await account.get();
       setUserId(user.$id);
-      // Inject the conversation_id directly into the iframe src
-      if (iframeRef.current) {
-        // iframeRef.current.src = `https://dify.unified-bi.org/chatbot/LejUgszGK0FV7PVK?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`;
-      }
       await loadUserSettings(user.$id);
+      await loadLlmList(user.$id);
     } catch (error) {
       navigate("/auth");
     }
   };
 
-  const loadUserSettings = async (userId: string) => {
+  const loadLlmList = async (currentUserId: string) => {
     try {
-      let effectiveUserId = userId;
+      let effectiveUserId = currentUserId;
 
-      // Check if logged-in user is a sub-user
-      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
+      // Check if logged-in user is a sub-user (team member)
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", currentUserId)]);
 
       if (teamRes.documents.length > 0) {
-        const subUserDoc = teamRes.documents[0];
+        effectiveUserId = teamRes.documents[0].parentUserId;
+      }
+
+      // Fetch LLMs assigned to this user from Supabase
+      const { data, error } = await supabase
+        .from("llm_list")
+        .select("*")
+        .eq("user_id", effectiveUserId);
+
+      if (error) {
+        console.error("Error fetching LLM list:", error);
+        return;
+      }
+
+      setLlmList(data || []);
+      if (data && data.length > 0) {
+        setSelectedLlm(data[0].llm_id);
+      }
+    } catch (error) {
+      console.error("Error loading LLM list:", error);
+    }
+  };
+
+  const loadUserSettings = async (currentUserId: string) => {
+    try {
+      let effectiveUserId = currentUserId;
+
+      // Check if logged-in user is a sub-user
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", currentUserId)]);
+
+      if (teamRes.documents.length > 0) {
         effectiveUserId = teamRes.documents[0].parentUserId;
       }
 
@@ -83,6 +121,41 @@ const Chat = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // No LLM assigned
+  if (llmList.length === 0) {
+    return (
+      <div className="min-h-screen gradient-subtle flex flex-col">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 py-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 flex-1 flex items-center justify-center">
+          <Card className="max-w-lg mx-auto animate-slide-up">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Bot className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <CardTitle>No LLM Assigned</CardTitle>
+              <CardDescription>
+                You don't have any LLM assigned to your account. Please contact your administrator to get access to an AI assistant.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => navigate("/dashboard")}>
+                Back to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
       </div>
     );
   }
@@ -134,14 +207,34 @@ const Chat = () => {
           </Card>
         ) : (
           <div className="flex-1 flex flex-col animate-slide-up">
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold">Chat with Your AI</h2>
-              <p className="text-muted-foreground">Ask questions about your uploaded documents</p>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Chat with Your AI</h2>
+                <p className="text-muted-foreground">Ask questions about your uploaded documents</p>
+              </div>
+              {llmList.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Select LLM:</span>
+                  <Select value={selectedLlm} onValueChange={setSelectedLlm}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select LLM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {llmList.map((llm) => (
+                        <SelectItem key={llm.id} value={llm.llm_id}>
+                          {llm.llm_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <Card className="flex-1 overflow-hidden">
               <CardContent className="p-0 h-full">
                 <iframe
-                  src={`https://dify.unified-bi.org/chat/LejUgszGK0FV7PVK?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`}
+                  ref={iframeRef}
+                  src={`https://dify.unified-bi.org/chat/${selectedLlm}?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`}
                   style={{ width: "100%", height: "100%", minHeight: "700px" }}
                   frameBorder="0"
                   allow="microphone"
