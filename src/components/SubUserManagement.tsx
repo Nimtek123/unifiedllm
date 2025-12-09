@@ -153,7 +153,6 @@ const SubUserManagement = () => {
           userId,
           llmId,
           llm_name: llm?.llmName || llmId,
-          parentUserId: currentUserId,
         });
       }
     } catch (error: any) {
