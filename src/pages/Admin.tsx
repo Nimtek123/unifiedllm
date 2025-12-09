@@ -100,10 +100,10 @@ const Admin = () => {
 
   const loadLlmList = async () => {
     try {
-      const { data, error } = await supabase.from("llm_list").select("*").order("created_at", { ascending: false });
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.LLM_LIST);
 
       if (error) throw error;
-      setLlmList(data || []);
+      setLlmList(response || []);
     } catch (error: any) {
       toast.error("Failed to load LLM list");
       console.error(error);
