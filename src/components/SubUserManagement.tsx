@@ -91,7 +91,7 @@ const SubUserManagement = () => {
           $id: doc.$id,
           llmId: doc.llmId,
           llmName: doc.llmName,
-        }))
+        })),
       );
     } catch (error: any) {
       console.error("Failed to load LLMs:", error);
@@ -116,11 +116,8 @@ const SubUserManagement = () => {
       // Load LLM assignments for each sub-user from Supabase
       const assignments: Record<string, string[]> = {};
       for (const user of users) {
-        const { data } = await supabase
-          .from("llm_list")
-          .select("llm_id, llm_name")
-          .eq("user_id", user.userId);
-        
+        const { data } = await supabase.from("llm_list").select("llmId, llm_name").eq("userId", user.userId);
+
         if (data && data.length > 0) {
           assignments[user.userId] = data.map((d) => d.llm_id);
         }
@@ -138,15 +135,15 @@ const SubUserManagement = () => {
   const saveLLMAssignments = async (userId: string, llmIds: string[]) => {
     try {
       // First delete existing assignments for this user
-      await supabase.from("llm_list").delete().eq("user_id", userId);
+      await supabase.from("llm_list").delete().eq("userId", userId);
 
       // Insert new assignments
       if (llmIds.length > 0) {
         const assignments = llmIds.map((llmId) => {
           const llm = availableLLMs.find((l) => l.llmId === llmId);
           return {
-            user_id: userId,
-            llm_id: llmId,
+            userId: userId,
+            llmId: llmId,
             llm_name: llm?.llmName || llmId,
           };
         });
@@ -322,9 +319,7 @@ const SubUserManagement = () => {
       const isAssigned = u.assignedLLMs.includes(llmId);
       return {
         ...u,
-        assignedLLMs: isAssigned
-          ? u.assignedLLMs.filter((id) => id !== llmId)
-          : [...u.assignedLLMs, llmId],
+        assignedLLMs: isAssigned ? u.assignedLLMs.filter((id) => id !== llmId) : [...u.assignedLLMs, llmId],
       };
     });
   };
