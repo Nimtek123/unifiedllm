@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { UserPlus, Trash2, Edit2, Save, X, Users, Bot } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Query, account, databases, DATABASE_ID, ID } from "@/integrations/appwrite/client";
-import { supabase } from "@/integrations/supabase/client";
 
 type PermissionType = "view" | "upload" | "delete" | "manage_users";
 
@@ -90,7 +89,7 @@ const SubUserManagement = () => {
         llms.documents.map((doc: any) => ({
           $id: doc.$id,
           llmId: doc.llmId,
-          llmName: doc.llmName,
+          llmName: doc.llm_name,
         })),
       );
     } catch (error: any) {
@@ -106,6 +105,7 @@ const SubUserManagement = () => {
 
   const loadSubUsers = async () => {
     try {
+      // 1. Load all sub-users linked to the parent
       const members = await databases.listDocuments(DATABASE_ID, USER_LINKS, [
         Query.equal("parentUserId", currentUserId),
       ]);
@@ -113,15 +113,19 @@ const SubUserManagement = () => {
       const users = members.documents as unknown as SubUser[];
       setSubUsers(users);
 
-      // Load LLM assignments for each sub-user from Supabase
+      // 2. Load LLM assignments for each sub-user (Appwrite version)
       const assignments: Record<string, string[]> = {};
-      for (const user of users) {
-        const { data } = await supabase.from("llm_list").select("llmId, llm_name").eq("userId", user.userId);
 
-        if (data && data.length > 0) {
-          assignments[user.userId] = data.map((d) => d.llm_id);
+      for (const user of users) {
+        const { documents } = await databases.listDocuments(DATABASE_ID, "llm_assignments", [
+          Query.equal("userId", user.userId),
+        ]);
+
+        if (documents.length > 0) {
+          assignments[user.userId] = documents.map((d: any) => d.llmId);
         }
       }
+
       setUserLLMAssignments(assignments);
     } catch (error: any) {
       toast.error("Failed to load team members");
@@ -131,23 +135,26 @@ const SubUserManagement = () => {
     }
   };
 
-  // Save LLM assignments to Supabase
+  // Save LLM assignments
   const saveLLMAssignments = async (userId: string, llmIds: string[]) => {
     try {
-      // First delete existing assignments for this user
-      await supabase.from("llm_list").delete().eq("userId", userId);
+      // 1. Delete old assignments
+      const existing = await databases.listDocuments(DATABASE_ID, "llm_assignments", [Query.equal("userId", userId)]);
 
-      // Insert new assignments
-      if (llmIds.length > 0) {
-        const assignments = llmIds.map((llmId) => {
-          const llm = availableLLMs.find((l) => l.llmId === llmId);
-          return {
-            userId: userId,
-            llmId: llmId,
-            llm_name: llm?.llmName || llmId,
-          };
+      for (const doc of existing.documents) {
+        await databases.deleteDocument(DATABASE_ID, "llm_assignments", doc.$id);
+      }
+
+      // 2. Insert new LLM assignments
+      for (const llmId of llmIds) {
+        const llm = availableLLMs.find((l) => l.llmId === llmId);
+
+        await databases.createDocument(DATABASE_ID, "llm_assignments", ID.unique(), {
+          userId,
+          llmId,
+          llm_name: llm?.llmName || llmId,
+          parentUserId: currentUserId,
         });
-        await supabase.from("llm_list").insert(assignments);
       }
     } catch (error: any) {
       console.error("Failed to save LLM assignments:", error);
