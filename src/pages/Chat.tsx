@@ -44,24 +44,18 @@ const Chat = () => {
       let effectiveUserId = currentUserId;
 
       // Check if logged-in user is a sub-user (team member)
-      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", currentUserId)]);
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [
+        Query.equal("userId", currentUserId),
+      ]);
 
       if (teamRes.documents.length > 0) {
         effectiveUserId = teamRes.documents[0].parentUserId;
       }
 
-      // Fetch LLMs assigned to this user from Supabase
-      const { data, error } = await supabase
-        .from("llm_list")
-        .select("*")
-        .eq("user_id", effectiveUserId);
+      // Fetch LLMs assigned to this user from Apprwite
+      const llmList = await appwriteDb.listDocuments(DATABASE_ID, "llm_list", [Query.equal("userId", currentUserId)]);
 
-      if (error) {
-        console.error("Error fetching LLM list:", error);
-        return;
-      }
-
-      setLlmList(data || []);
+      setLlmList(llmList.documents || []);
       if (data && data.length > 0) {
         setSelectedLlm(data[0].llm_id);
       }
@@ -75,7 +69,9 @@ const Chat = () => {
       let effectiveUserId = currentUserId;
 
       // Check if logged-in user is a sub-user
-      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", currentUserId)]);
+      const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [
+        Query.equal("userId", currentUserId),
+      ]);
 
       if (teamRes.documents.length > 0) {
         effectiveUserId = teamRes.documents[0].parentUserId;
@@ -146,7 +142,8 @@ const Chat = () => {
               </div>
               <CardTitle>No LLM Assigned</CardTitle>
               <CardDescription>
-                You don't have any LLM assigned to your account. Please contact your administrator to get access to an AI assistant.
+                You don't have any LLM assigned to your account. Please contact your administrator to get access to an
+                AI assistant.
               </CardDescription>
             </CardHeader>
             <CardContent>
