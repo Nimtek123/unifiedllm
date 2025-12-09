@@ -139,17 +139,17 @@ const SubUserManagement = () => {
   const saveLLMAssignments = async (userId: string, llmIds: string[]) => {
     try {
       // 1. Delete old assignments
-      const existing = await databases.listDocuments(DATABASE_ID, "llm_assignments", [Query.equal("userId", userId)]);
+      const existing = await databases.listDocuments(DATABASE_ID, "llm_list", [Query.equal("userId", userId)]);
 
       for (const doc of existing.documents) {
-        await databases.deleteDocument(DATABASE_ID, "llm_assignments", doc.$id);
+        await databases.deleteDocument(DATABASE_ID, "llm_list", doc.$id);
       }
 
       // 2. Insert new LLM assignments
       for (const llmId of llmIds) {
         const llm = availableLLMs.find((l) => l.llmId === llmId);
 
-        await databases.createDocument(DATABASE_ID, "llm_assignments", ID.unique(), {
+        await databases.createDocument(DATABASE_ID, "llm_list", ID.unique(), {
           userId,
           llmId,
           llm_name: llm?.llmName || llmId,
