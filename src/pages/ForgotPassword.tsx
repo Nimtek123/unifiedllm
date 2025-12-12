@@ -6,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Brain, ArrowLeft, Mail, KeyRound, Lock } from "lucide-react";
-import { account, appwriteDb, DATABASE_ID, ID, Query } from "@/integrations/appwrite/client";
-
-const USER_ACCOUNTS = "user_accounts";
+import { supabase } from "@/integrations/supabase/client";
 
 type Step = "email" | "code" | "password";
 
@@ -21,45 +19,16 @@ const ForgotPassword = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  /** STEP 1 — Send Reset Code */
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Generate random 8-character code
-      const resetCode = Array.from(crypto.getRandomValues(new Uint8Array(8)))
-        .map((v) => (v % 36).toString(36).toUpperCase())
-        .join("");
-
-      // Store in Appwrite database (upsert)
-      const existing = await appwriteDb.listDocuments(DATABASE_ID, USER_ACCOUNTS, [
-        Query.equal("email", email),
-      ]);
-
-      if (existing.documents.length > 0) {
-        await appwriteDb.updateDocument(
-          DATABASE_ID,
-          USER_ACCOUNTS,
-          existing.documents[0].$id,
-          { security_code: resetCode }
-        );
-      } else {
-        await appwriteDb.createDocument(
-          DATABASE_ID,
-          USER_ACCOUNTS,
-          ID.unique(),
-          { email, security_code: resetCode }
-        );
-      }
-
-      // Send email via edge function
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://trhnhfqkxgbjcrficgek.supabase.co";
-      await fetch(`${supabaseUrl}/functions/v1/send-reset-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: resetCode }),
+      const { data, error } = await supabase.functions.invoke("send-reset-code", {
+        body: { email },
       });
+
+      if (error) throw error;
 
       toast.success("If this email exists, a reset code has been sent.");
       setStep("code");
@@ -70,33 +39,18 @@ const ForgotPassword = () => {
     }
   };
 
-  /** STEP 2 — Verify Code */
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (code.length !== 8) {
       toast.error("Please enter the 8-character code");
       return;
     }
 
-    try {
-      const res = await appwriteDb.listDocuments(DATABASE_ID, USER_ACCOUNTS, [
-        Query.equal("email", email),
-        Query.equal("security_code", code.toUpperCase()),
-      ]);
-
-      if (res.documents.length === 0) {
-        toast.error("Invalid or expired code");
-        return;
-      }
-
-      setStep("password");
-    } catch (error: any) {
-      toast.error("Verification failed");
-    }
+    // Just move to password step - actual verification happens on submit
+    setStep("password");
   };
 
-  /** STEP 3 — Reset Password */
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -113,26 +67,16 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
-      // Call edge function to reset password
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://trhnhfqkxgbjcrficgek.supabase.co";
-      const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email, 
-          code: code.toUpperCase(), 
-          newPassword 
-        }),
+      const { data, error } = await supabase.functions.invoke("reset-password", {
+        body: { email, code: code.toUpperCase(), newPassword },
       });
 
-      const result = await response.json();
-
-      if (!response.ok) throw new Error(result.error || "Failed to reset password");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast.success("Password updated successfully!");
       navigate("/auth");
     } catch (error: any) {
-      console.error(error);
       toast.error(error.message || "Failed to reset password");
     } finally {
       setIsLoading(false);
@@ -157,81 +101,112 @@ const ForgotPassword = () => {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {step === "email" && <Mail className="w-5 h-5" />}
-              {step === "code" && <KeyRound className="w-5 h-5" />}
-              {step === "password" && <Lock className="w-5 h-5" />}
-              {step === "email" && "Email Verification"}
-              {step === "code" && "Enter Code"}
-              {step === "password" && "New Password"}
+              {step === "email" && <><Mail className="w-5 h-5" /> Email Verification</>}
+              {step === "code" && <><KeyRound className="w-5 h-5" /> Enter Code</>}
+              {step === "password" && <><Lock className="w-5 h-5" /> New Password</>}
             </CardTitle>
             <CardDescription>
               Step {step === "email" ? "1" : step === "code" ? "2" : "3"} of 3
             </CardDescription>
           </CardHeader>
-
           <CardContent>
-            {/* STEP 1 — EMAIL */}
             {step === "email" && (
               <form onSubmit={handleSendCode} className="space-y-4">
-                <Label>Email Address</Label>
-                <Input
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                <Button className="w-full">{isLoading ? "Sending..." : "Send Reset Code"}</Button>
-              </form>
-            )}
-
-            {/* STEP 2 — CODE */}
-            {step === "code" && (
-              <form onSubmit={handleVerifyCode} className="space-y-4">
-                <Label>Reset Code</Label>
-                <Input
-                  type="text"
-                  placeholder="XXXXXXXX"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 8))}
-                  maxLength={8}
-                  className="text-center text-2xl tracking-widest font-mono"
-                />
-                <Button className="w-full" disabled={code.length !== 8}>
-                  Verify Code
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Sending..." : "Send Reset Code"}
                 </Button>
               </form>
             )}
 
-            {/* STEP 3 — PASSWORD */}
+            {step === "code" && (
+              <form onSubmit={handleVerifyCode} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="code">Reset Code</Label>
+                  <Input
+                    id="code"
+                    type="text"
+                    placeholder="XXXXXXXX"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 8))}
+                    required
+                    disabled={isLoading}
+                    className="text-center text-2xl tracking-widest font-mono"
+                    maxLength={8}
+                  />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Check your email for the 8-character code
+                  </p>
+                </div>
+                <Button type="submit" className="w-full" disabled={code.length !== 8}>
+                  Verify Code
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setStep("email")}
+                >
+                  Didn't receive code? Try again
+                </Button>
+              </form>
+            )}
+
             {step === "password" && (
               <form onSubmit={handleResetPassword} className="space-y-4">
-                <Label>New Password</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-                <Label>Confirm Password</Label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-                <Button className="w-full">{isLoading ? "Updating..." : "Update Password"}</Button>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    minLength={8}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    minLength={8}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Updating..." : "Update Password"}
+                </Button>
               </form>
             )}
           </CardContent>
         </Card>
 
         <div className="mt-6 text-center">
-          <Button variant="ghost" onClick={() => navigate("/auth")}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Sign In
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/auth")}
+            className="text-muted-foreground"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Sign In
           </Button>
         </div>
       </div>
