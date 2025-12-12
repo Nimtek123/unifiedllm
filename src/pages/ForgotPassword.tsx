@@ -35,7 +35,7 @@ const ForgotPassword = () => {
       await appwriteDb.createDocument(DATABASE_ID, RESET_CODES_COLLECTION, "unique()", {
         email,
         security_code: generatedCode,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 15).toISOString(), // 15 min expiry
+        expiresAt: new Date(Date.now() + 1000 * 60 * 5).toISOString(), // 5 min expiry
         used: false,
       });
 
@@ -67,8 +67,9 @@ const ForgotPassword = () => {
     try {
       const res = await appwriteDb.listDocuments(DATABASE_ID, RESET_CODES_COLLECTION, [
         Query.equal("email", email),
-        Query.equal("code", code.toUpperCase()),
+        Query.equal("security_code", code.toUpperCase()),
         Query.equal("used", false),
+        Query.greaterThan("expiresAt", new Date().toISOString()),
       ]);
 
       if (res.documents.length === 0) {
