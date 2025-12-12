@@ -42,7 +42,7 @@ const ForgotPassword = () => {
       // Call an Appwrite function to send the email
       await functions.createExecution("sendPasswordResetEmail", {
         email,
-        code: generatedCode,
+        security_code: generatedCode,
       });
 
       toast.success("If this email exists, a reset code has been sent.");
