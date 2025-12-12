@@ -34,7 +34,7 @@ const ForgotPassword = () => {
       // Save the code in Appwrite DB
       await appwriteDb.createDocument(DATABASE_ID, RESET_CODES_COLLECTION, "unique()", {
         email,
-        code: generatedCode,
+        security_code: generatedCode,
         expiresAt: new Date(Date.now() + 1000 * 60 * 15).toISOString(), // 15 min expiry
         used: false,
       });
