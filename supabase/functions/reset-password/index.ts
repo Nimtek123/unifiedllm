@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +7,8 @@ const corsHeaders = {
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
 const PROJECT_ID = "6921fb6b001624e640e3";
+const DATABASE_ID = "692f6e880008c421e414";
+const COLLECTION_USER_ACCOUNTS = "user_accounts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -32,32 +33,45 @@ serve(async (req) => {
       );
     }
 
-    // Verify the code in Supabase
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const APPWRITE_API_KEY = Deno.env.get("APPWRITE_API_KEY");
+    const normalizedEmail = email.toLowerCase();
+    const normalizedCode = code.toUpperCase();
 
-    const { data: resetCode, error: fetchError } = await supabase
-      .from("password_reset_codes")
-      .select("*")
-      .eq("email", email.toLowerCase())
-      .eq("security_code", code.toUpperCase())
-      .eq("used", false)
-      .gte("expires_at", new Date().toISOString())
-      .maybeSingle();
+    // Verify the code in Appwrite user_accounts collection
+    const docsResponse = await fetch(
+      `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Appwrite-Project": PROJECT_ID,
+          "X-Appwrite-Key": APPWRITE_API_KEY!,
+        },
+      }
+    );
 
-    if (fetchError || !resetCode) {
+    const docsData = await docsResponse.json();
+    console.log("Docs for email:", docsData);
+
+    if (!docsData.documents || docsData.documents.length === 0) {
       return new Response(
         JSON.stringify({ error: "Invalid or expired code" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get user from Appwrite
-    const APPWRITE_API_KEY = Deno.env.get("APPWRITE_API_KEY");
+    const userAccountDoc = docsData.documents[0];
     
+    // Check if code matches
+    if (userAccountDoc.security_code !== normalizedCode) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired code" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get user from Appwrite users
     const usersResponse = await fetch(
-      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(`equal("email", ["${email}"])`)}`,
+      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -101,11 +115,23 @@ serve(async (req) => {
       );
     }
 
-    // Mark the code as used
-    await supabase
-      .from("password_reset_codes")
-      .update({ used: true })
-      .eq("id", resetCode.id);
+    // Clear the security code after use
+    await fetch(
+      `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents/${userAccountDoc.$id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Appwrite-Project": PROJECT_ID,
+          "X-Appwrite-Key": APPWRITE_API_KEY!,
+        },
+        body: JSON.stringify({
+          data: { security_code: null },
+        }),
+      }
+    );
+
+    console.log("Password updated successfully for:", normalizedEmail);
 
     return new Response(
       JSON.stringify({ success: true, message: "Password updated successfully" }),

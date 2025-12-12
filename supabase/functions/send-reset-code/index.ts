@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +7,8 @@ const corsHeaders = {
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
 const PROJECT_ID = "6921fb6b001624e640e3";
+const DATABASE_ID = "692f6e880008c421e414";
+const COLLECTION_USER_ACCOUNTS = "user_accounts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -26,10 +27,11 @@ serve(async (req) => {
     }
 
     const APPWRITE_API_KEY = Deno.env.get("APPWRITE_API_KEY");
+    const normalizedEmail = email.toLowerCase();
     
-    // First verify the email exists in Appwrite
+    // First verify the email exists in Appwrite users
     const usersResponse = await fetch(
-      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(`equal("email", ["${email}"])`)}`,
+      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -56,36 +58,75 @@ serve(async (req) => {
       securityCode += characters.charAt(Math.floor(Math.random() * characters.length));
     }
 
-    // Save the code to Supabase
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Check if document exists for this email in user_accounts
+    const existingDocsResponse = await fetch(
+      `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Appwrite-Project": PROJECT_ID,
+          "X-Appwrite-Key": APPWRITE_API_KEY!,
+        },
+      }
+    );
 
-    // Delete any existing unused codes for this email
-    await supabase
-      .from("password_reset_codes")
-      .delete()
-      .eq("email", email.toLowerCase())
-      .eq("used", false);
+    const existingDocs = await existingDocsResponse.json();
+    console.log("Existing docs for email:", existingDocs);
 
-    // Insert new code
-    const { error: insertError } = await supabase
-      .from("password_reset_codes")
-      .insert({
-        email: email.toLowerCase(),
-        security_code: securityCode,
-      });
+    if (existingDocs.documents && existingDocs.documents.length > 0) {
+      // Update existing document with new security code
+      const docId = existingDocs.documents[0].$id;
+      const updateResponse = await fetch(
+        `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents/${docId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Appwrite-Project": PROJECT_ID,
+            "X-Appwrite-Key": APPWRITE_API_KEY!,
+          },
+          body: JSON.stringify({
+            data: { security_code: securityCode },
+          }),
+        }
+      );
 
-    if (insertError) {
-      console.error("Error inserting reset code:", insertError);
-      throw new Error("Failed to create reset code");
+      if (!updateResponse.ok) {
+        const error = await updateResponse.json();
+        console.error("Error updating reset code:", error);
+        throw new Error("Failed to update reset code");
+      }
+    } else {
+      // Create new document
+      const createResponse = await fetch(
+        `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Appwrite-Project": PROJECT_ID,
+            "X-Appwrite-Key": APPWRITE_API_KEY!,
+          },
+          body: JSON.stringify({
+            documentId: "unique()",
+            data: {
+              email: normalizedEmail,
+              security_code: securityCode,
+            },
+          }),
+        }
+      );
+
+      if (!createResponse.ok) {
+        const error = await createResponse.json();
+        console.error("Error creating reset code:", error);
+        throw new Error("Failed to create reset code");
+      }
     }
 
-    // Send email using a simple SMTP-like approach or log it
-    // For now, we'll log the code (in production, integrate with Resend or similar)
-    console.log(`Password reset code for ${email}: ${securityCode}`);
+    console.log(`Password reset code for ${normalizedEmail}: ${securityCode}`);
     
-    // Try to send via Resend if available
+    // Send email via Resend
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (RESEND_API_KEY) {
       try {
@@ -116,6 +157,8 @@ serve(async (req) => {
         
         if (!emailResponse.ok) {
           console.error("Resend error:", await emailResponse.text());
+        } else {
+          console.log("Reset email sent successfully");
         }
       } catch (emailErr) {
         console.error("Email sending error:", emailErr);
