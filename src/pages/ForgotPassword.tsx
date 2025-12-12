@@ -65,12 +65,19 @@ const ForgotPassword = () => {
     }
 
     try {
-      const res = await appwriteDb.listDocuments(DATABASE_ID, RESET_CODES_COLLECTION, [
-        Query.equal("email", email),
-        Query.equal("security_code", code.toUpperCase()),
-        Query.equal("used", false),
-        Query.greaterThan("expiresAt", new Date().toISOString()),
-      ]);
+      const res = await appwriteDb.listDocuments(
+        DATABASE_ID,
+        RESET_CODES_COLLECTION,
+        [
+          Query.equal("email", email),
+          Query.equal("security_code", code.toUpperCase()),
+          Query.equal("used", false),
+          Query.greaterThan("expiresAt", new Date().toISOString()),
+        ],
+        1, // Limit to 1 document (the latest)
+        undefined, // Offset
+        [Query.orderDesc("$createdAt")], // Sort by creation date descending
+      );
 
       if (res.documents.length === 0) {
         toast.error("Invalid or expired code");
