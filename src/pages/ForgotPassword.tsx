@@ -6,17 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Brain, ArrowLeft, Mail, KeyRound, Lock } from "lucide-react";
-import { Client, Databases, Functions } from "appwrite";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, ID, Query } from "@/integrations/appwrite/client";
 
-const client = new Client()
-  .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
-  .setProject(import.meta.env.VITE_APPWRITE_PROJECT);
-
-const db = new Databases(client);
-const functions = new Functions(client);
-
-const RESET_CODES_COLLECTION = "user_accounts";
+const USER_ACCOUNTS = "user_accounts";
 
 type Step = "email" | "code" | "password";
 
@@ -31,62 +23,52 @@ const ForgotPassword = () => {
 
   /** STEP 1 — Send Reset Code */
   const handleSendCode = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    // 1. Check if user exists in Appwrite Auth
-    let userFound = null;
     try {
-      // Try login with fake password to see if email exists
-      await appwriteAccount.createEmailPasswordSession(email, "invalid");
-    } catch (err: any) {
-      if (err?.response?.message?.includes("Invalid credentials")) {
-        userFound = true; 
-      }
-    }
+      // Generate random 8-character code
+      const resetCode = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+        .map((v) => (v % 36).toString(36).toUpperCase())
+        .join("");
 
-    if (!userFound) {
+      // Store in Appwrite database (upsert)
+      const existing = await appwriteDb.listDocuments(DATABASE_ID, USER_ACCOUNTS, [
+        Query.equal("email", email),
+      ]);
+
+      if (existing.documents.length > 0) {
+        await appwriteDb.updateDocument(
+          DATABASE_ID,
+          USER_ACCOUNTS,
+          existing.documents[0].$id,
+          { security_code: resetCode }
+        );
+      } else {
+        await appwriteDb.createDocument(
+          DATABASE_ID,
+          USER_ACCOUNTS,
+          ID.unique(),
+          { email, security_code: resetCode }
+        );
+      }
+
+      // Send email via edge function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://trhnhfqkxgbjcrficgek.supabase.co";
+      await fetch(`${supabaseUrl}/functions/v1/send-reset-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: resetCode }),
+      });
+
       toast.success("If this email exists, a reset code has been sent.");
       setStep("code");
-      return;
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send reset code");
+    } finally {
+      setIsLoading(false);
     }
-
-    // 2. Generate random 8-character code
-    const resetCode = Array.from(crypto.getRandomValues(new Uint8Array(8)))
-      .map((v) => (v % 36).toString(36).toUpperCase())
-      .join("");
-
-    // 3. Store in Appwrite database (upsert)
-    const existing = await appwriteDb.listDocuments(DATABASE_ID, USER_ACCOUNTS, [
-      Query.equal("email", email),
-    ]);
-
-    if (existing.documents.length > 0) {
-      await appwriteDb.updateDocument(
-        DATABASE_ID,
-        USER_ACCOUNTS,
-        existing.documents[0].$id,
-        { security_code: resetCode }
-      );
-    } else {
-      await appwriteDb.createDocument(
-        DATABASE_ID,
-        USER_ACCOUNTS,
-        ID.unique(),
-        { email, security_code: resetCode }
-      );
-    }
-
-    toast.success("If this email exists, a reset code has been sent.");
-    setStep("code");
-  } catch (error: any) {
-    toast.error(error.message || "Failed to send reset code");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   /** STEP 2 — Verify Code */
   const handleVerifyCode = async (e: React.FormEvent) => {
@@ -98,10 +80,9 @@ const ForgotPassword = () => {
     }
 
     try {
-      const res = await db.listDocuments(DATABASE_ID, RESET_CODES_COLLECTION, [
+      const res = await appwriteDb.listDocuments(DATABASE_ID, USER_ACCOUNTS, [
         Query.equal("email", email),
-        Query.equal("code", code.toUpperCase()),
-        Query.equal("used", false),
+        Query.equal("security_code", code.toUpperCase()),
       ]);
 
       if (res.documents.length === 0) {
@@ -132,16 +113,21 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
-      // Call Appwrite backend function to update the password
-      const execution = await functions.createExecution("update-user-password", {
-        email,
-        code: code.toUpperCase(),
-        newPassword,
+      // Call edge function to reset password
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://trhnhfqkxgbjcrficgek.supabase.co";
+      const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email, 
+          code: code.toUpperCase(), 
+          newPassword 
+        }),
       });
 
-      const response = JSON.parse(execution.responseBody);
+      const result = await response.json();
 
-      if (response.error) throw new Error(response.error);
+      if (!response.ok) throw new Error(result.error || "Failed to reset password");
 
       toast.success("Password updated successfully!");
       navigate("/auth");
