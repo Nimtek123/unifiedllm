@@ -1,4 +1,4 @@
-import { Client, Databases, Account, Storage, ID, Query } from "appwrite";
+import { Client, Databases, Account, Storage, ID, Query, Functions } from "appwrite";
 
 const client = new Client();
 
@@ -12,6 +12,7 @@ if (typeof window !== "undefined") {
 export const databases = new Databases(client);
 export const account = new Account(client);
 export const storage = new Storage(client);
+export const functions = new Functions(client);
 
 export const DATABASE_ID = "692f6e880008c421e414";
 export const COLLECTIONS = {

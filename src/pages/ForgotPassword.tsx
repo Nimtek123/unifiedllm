@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Brain, ArrowLeft, Mail, KeyRound, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query, functions } from "@/integrations/appwrite/client";
 
 type Step = "email" | "code" | "password";
 const RESET_CODES_COLLECTION = "user_accounts";
@@ -34,7 +34,7 @@ const ForgotPassword = () => {
       // Save the code in Appwrite DB
       await appwriteDb.createDocument(DATABASE_ID, RESET_CODES_COLLECTION, "unique()", {
         email,
-        security_code: generatedCode,
+        code: generatedCode,
         expiresAt: new Date(Date.now() + 1000 * 60 * 5).toISOString(), // 5 min expiry
         used: false,
       });
@@ -42,7 +42,7 @@ const ForgotPassword = () => {
       // Call an Appwrite function to send the email
       await functions.createExecution("sendPasswordResetEmail", {
         email,
-        security_code: generatedCode,
+        code: generatedCode,
       });
 
       toast.success("If this email exists, a reset code has been sent.");
