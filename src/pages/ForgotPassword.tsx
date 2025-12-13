@@ -74,7 +74,7 @@ const ForgotPassword = () => {
         RESET_CODES_COLLECTION,
         [
           Query.equal("email", email),
-          Query.equal("security_code", code.toUpperCase()),
+          Query.equal("code", code.toUpperCase()),
           Query.equal("used", false),
           Query.greaterThan("expiresAt", new Date().toISOString()),
         ],
