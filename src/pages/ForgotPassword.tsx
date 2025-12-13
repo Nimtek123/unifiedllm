@@ -31,26 +31,23 @@ const ForgotPassword = () => {
         .map((v) => (v % 36).toString(36).toUpperCase())
         .join("");
 
-      // Save the code in Appwrite DB
-      await appwriteDb.createDocument(DATABASE_ID, RESET_CODES_COLLECTION, "unique()", {
-        email,
-        code: generatedCode,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 5).toISOString(), // 5 min expiry
-        used: false,
-      });
-
-      // Call an Appwrite function to send the email
+      // Call an Appwrite function to handle everything
       const execution = await functions.createExecution(
-        "693ca01700141790a74b",
+        "693ca01700141790a74b", // Your function ID
         JSON.stringify({
-          // Must be a JSON string
           email: email,
-          code: generatedCode,
+          action: "send_reset_code", // Specify action
         }),
       );
 
-      toast.success("If this email exists, a reset code has been sent.");
-      setStep("code");
+      const response = JSON.parse(execution.responseBody);
+
+      if (response.success) {
+        toast.success("If this email exists, a reset code has been sent.");
+        setStep("code");
+      } else {
+        toast.error(response.error || "Failed to send reset code");
+      }
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Failed to send reset code");
@@ -69,21 +66,12 @@ const ForgotPassword = () => {
     }
 
     try {
-      const res = await appwriteDb.listDocuments(
-        DATABASE_ID,
-        RESET_CODES_COLLECTION,
-        [
-          Query.equal("email", email),
-          Query.equal("code", code.toUpperCase()),
-          Query.equal("used", false),
-          Query.greaterThan("expiresAt", new Date().toISOString()),
-        ],
-        1, // Limit to 1 document (the latest)
-        undefined, // Offset
-        [Query.orderDesc("$createdAt")], // Sort by creation date descending
-      );
+      // Call the edge function
+      const execution = await functions.createExecution("verifyResetCode", JSON.stringify({ email, code }));
 
-      if (res.documents.length === 0) {
+      const response = JSON.parse(execution.responseBody);
+
+      if (!response.valid) {
         toast.error("Invalid or expired code");
         return;
       }
