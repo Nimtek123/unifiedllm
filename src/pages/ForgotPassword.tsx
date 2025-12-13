@@ -40,10 +40,14 @@ const ForgotPassword = () => {
       });
 
       // Call an Appwrite function to send the email
-      await functions.createExecution("sendPasswordResetEmail", {
-        email,
-        code: generatedCode,
-      });
+      const execution = await functions.createExecution(
+        "sendPasswordResetEmail",
+        JSON.stringify({
+          // Must be a JSON string
+          email: email,
+          code: generatedCode,
+        }),
+      );
 
       toast.success("If this email exists, a reset code has been sent.");
       setStep("code");
