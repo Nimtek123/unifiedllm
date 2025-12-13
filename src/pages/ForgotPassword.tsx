@@ -26,33 +26,16 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
-      // Generate 8-character reset code
-      const generatedCode = [...crypto.getRandomValues(new Uint8Array(8))]
-        .map((v) => (v % 36).toString(36).toUpperCase())
-        .join("");
-
       // Call an Appwrite function to handle everything
-      // const execution = await functions.createExecution(
-      //   "693ca01700141790a74b", // Your function ID
-      //   JSON.stringify({
-      //     email: email,
-      //     action: "send_reset_code", // Specify action
-      //   }),
-      // );
-
-      const response = await fetch("https://appwrite.unified-bi.org/v1/functions/693ca01700141790a74b/executions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Appwrite-Project": "YOUR_PROJECT_ID",
-        },
-        body: JSON.stringify({
-          email,
-          action: "send_reset_code",
+      const execution = await functions.createExecution(
+        "693ca01700141790a74b", // Your function ID
+        JSON.stringify({
+          email: email,
+          action: "send_reset_code", // Specify action
         }),
-      });
+      );
 
-      // const response = JSON.parse(execution.responseBody);
+      const response = JSON.parse(execution.responseBody);
 
       if (response.success) {
         toast.success("If this email exists, a reset code has been sent.");
