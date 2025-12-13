@@ -100,11 +100,14 @@ const ForgotPassword = () => {
 
     try {
       // Call Appwrite backend function to update the password
-      const execution = await functions.createExecution("resetPassword", {
-        email,
-        code: code.toUpperCase(),
-        newPassword,
-      });
+      const execution = await functions.createExecution(
+        "resetPassword",
+        JSON.stringify({
+          email,
+          code: code.toUpperCase(),
+          newPassword,
+        })
+      );
 
       const response = JSON.parse(execution.responseBody);
 
