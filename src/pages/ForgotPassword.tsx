@@ -99,7 +99,6 @@ const ForgotPassword = () => {
         "resetPassword",
         JSON.stringify({
           email,
-          code: code.toUpperCase(),
           newPassword,
         }),
       );
