@@ -41,7 +41,7 @@ const ForgotPassword = () => {
 
       // Call an Appwrite function to send the email
       const execution = await functions.createExecution(
-        "sendPasswordResetEmail",
+        "693ca01700141790a74b",
         JSON.stringify({
           // Must be a JSON string
           email: email,
