@@ -26,8 +26,6 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
-      await account.deleteSession("current");
-
       // Call an Appwrite function to handle everything
       const execution = await functions.createExecution(
         "693ca01700141790a74b", // Your function ID
