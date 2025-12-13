@@ -67,7 +67,7 @@ const ForgotPassword = () => {
 
     try {
       // Call the edge function
-      const execution = await functions.createExecution("verifyResetCode", JSON.stringify({ email, code }));
+      const execution = await functions.createExecution("693cc640003623bac07b", JSON.stringify({ email, code }));
 
       const response = JSON.parse(execution.responseBody);
 
