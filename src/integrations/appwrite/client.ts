@@ -22,7 +22,7 @@ export const COLLECTIONS = {
 
 // API Key for server-side operations (used when session cookies don't work)
 const API_KEY =
-  "standard_7e09b4939bca901fe26ba745737c6c674cb4ccb4a9acf1b13a2e1a88e6529613793e0e505d84257f2841e7c415921606a204320960828ea771b62adea751a198dce1638fa30a4f5ee762ee9522914dcd16df3f0cee8e1dc8b4a700f8f9af2418ad21ee55df621693c7f32fc8666a0371a9e95d70e2b184c4b7a28499421f3e70";
+  "c6c1168be1620cabdf69d32e660843cd764b17abfb6e25d260a89af09d4268a49c43fd7bb7bbdf950d3f987f688ecb1523394eddb08e75ef65a0994772c5912d167a9d07c25dedfeeefaa76938d5ee8216784b380b6561091f51e802d0ac2403f3ad0d6ba77c8bbf8d4087a9b0ac56b4746b575f5c494ff617d93cfd6e48d50d";
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
 const PROJECT_ID = "6921fb6b001624e640e3";
