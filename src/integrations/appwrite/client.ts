@@ -2,7 +2,7 @@ import { Client, Databases, Account, Storage, ID, Query, Functions } from "appwr
 
 const client = new Client();
 
-client.setEndpoint("https://appwrite.unified-bi.org/v1").setProject("6921fb6b001624e640e3");
+client.setEndpoint("http://localhost:8888/v1").setProject("693e368b0033aad1fe57");
 
 // For cross-domain cookies
 if (typeof window !== "undefined") {
@@ -14,7 +14,7 @@ export const account = new Account(client);
 export const storage = new Storage(client);
 export const functions = new Functions(client);
 
-export const DATABASE_ID = "692f6e880008c421e414";
+export const DATABASE_ID = "693eaa4d0039d9238080";
 export const COLLECTIONS = {
   USER_SETTINGS: "user_settings",
   LLM_LIST: "llm_list",
@@ -22,10 +22,10 @@ export const COLLECTIONS = {
 
 // API Key for server-side operations (used when session cookies don't work)
 const API_KEY =
-  "standard_7e09b4939bca901fe26ba745737c6c674cb4ccb4a9acf1b13a2e1a88e6529613793e0e505d84257f2841e7c415921606a204320960828ea771b62adea751a198dce1638fa30a4f5ee762ee9522914dcd16df3f0cee8e1dc8b4a700f8f9af2418ad21ee55df621693c7f32fc8666a0371a9e95d70e2b184c4b7a28499421f3e70";
+  "standard_ca76034022f85f3a53321e8c43dc89a15e6ac9410a54084051f463e8ef10becfd55bd77bc51afa25730c11c830817fbf2c461c3af15ef5e8ae7ff07e8253ebb1298e3e2f8f8a83a0348daadd8a1383ead62b60342db8a56ca3040a89b4e95cba4a094ec98140066b84b1bad798c0dd960d8a60fa76a1353034e4d1bd5f53bf3a";
 
-const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
-const PROJECT_ID = "6921fb6b001624e640e3";
+const APPWRITE_ENDPOINT = "http://localhost:8888/v1";
+const PROJECT_ID = "693e368b0033aad1fe57";
 
 // Helper function to make authenticated API requests
 export const appwriteFetch = async (path: string, options: RequestInit = {}) => {
@@ -87,7 +87,7 @@ export const appwriteDb = {
 };
 
 // Dify API helper with direct connections
-const DIFY_API_URL = "https://dify.unified-bi.org/v1";
+const DIFY_API_URL = "http://localhost:8088/v1";
 const TEAM_MEMBERS_COLLECTION = "team_members";
 
 // Helper to get parent user ID for sub-users

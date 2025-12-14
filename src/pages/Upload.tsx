@@ -27,6 +27,8 @@ const Upload = () => {
     can_manage_users: false,
   });
   const [subUser, setSubUser] = useState(false);
+  const DIFY_API_URL = "http://localhost:8088/v1";
+
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -83,7 +85,7 @@ const Upload = () => {
 
   const loadDocuments = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
+      const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/documents?page=1&limit=100`, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
       if (response.ok) {
@@ -168,7 +170,7 @@ const Upload = () => {
         );
 
         const response = await fetch(
-          `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/document/create_by_file`,
+          `${DIFY_API_URL}/datasets/${userSettings.datasetId}/document/create_by_file`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${userSettings.apiKey}` },

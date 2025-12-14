@@ -23,6 +23,8 @@ const Chat = () => {
   const [userId, setUserId] = useState<string>("");
   const [llmList, setLlmList] = useState<LLMItem[]>([]);
   const [selectedLlm, setSelectedLlm] = useState<string>("");
+  const DIFY_API_URL = "http://localhost:8088/v1";
+  const DIFY_CHAT_URL = "http://localhost:8088";
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -98,7 +100,7 @@ const Chat = () => {
 
   const checkDocuments = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=1`, {
+      const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/documents?page=1&limit=1`, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
 
@@ -231,7 +233,7 @@ const Chat = () => {
               <CardContent className="p-0 h-full">
                 <iframe
                   ref={iframeRef}
-                  src={`https://dify.unified-bi.org/chat/${selectedLlm}?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`}
+                  src={`${DIFY_CHAT_URL}/chat/${selectedLlm}?user=${userId}&conversation_id=empty&hide_header=true&hide_title=true`}
                   style={{ width: "100%", height: "100%", minHeight: "700px" }}
                   frameBorder="0"
                   allow="microphone"

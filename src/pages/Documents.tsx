@@ -46,6 +46,7 @@ const Documents = () => {
     can_manage_users: false,
   });
   const [subUser, setSubUser] = useState(false);
+  const DIFY_API_URL = "http://localhost:8088/v1";
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -114,7 +115,7 @@ const Documents = () => {
 
   const loadDocuments = async (datasetId: string, apiKey: string) => {
     try {
-      const response = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents?page=1&limit=100`, {
+      const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/documents?page=1&limit=100`, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
       if (response.ok) {
@@ -135,7 +136,7 @@ const Documents = () => {
 
     try {
       const response = await fetch(
-        `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/documents/${doc.id}`,
+        `${DIFY_API_URL}/datasets/${userSettings.datasetId}/documents/${doc.id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${userSettings.apiKey}` },
