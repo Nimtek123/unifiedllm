@@ -10,11 +10,7 @@ import { Brain, Sparkles, ArrowLeft } from "lucide-react";
 import { account, ID } from "@/integrations/appwrite/client";
 import { supabase } from "@/integrations/supabase/client";
 import ReCAPTCHA from "react-google-recaptcha";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -62,15 +58,23 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-verification-code", {
-        body: { email },
-      });
+      // Call an Appwrite function to handle everything
+      const execution = await functions.createExecution(
+        "693ca01700141790a74b", // Your function ID
+        JSON.stringify({
+          email: email,
+          action: "send_reset_code", // Specify action
+        }),
+      );
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const response = JSON.parse(execution.responseBody);
 
-      toast.success("Verification code sent to your email");
-      setSignupStep("verify");
+      if (response.success) {
+        toast.success("Verification code sent to your email");
+        setSignupStep("verify");
+      } else {
+        toast.error(response.error || "Failed to send reset code");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to send verification code");
       recaptchaRef.current?.reset();
@@ -90,12 +94,15 @@ const Auth = () => {
 
     try {
       // Verify the code
-      const { data: verifyData, error: verifyError } = await supabase.functions.invoke("verify-email-code", {
-        body: { email, code: otpCode },
-      });
+      // Call the edge function
+      const execution = await functions.createExecution("693cc640003623bac07b", JSON.stringify({ email, code }));
 
-      if (verifyError) throw verifyError;
-      if (verifyData?.error) throw new Error(verifyData.error);
+      const response = JSON.parse(execution.responseBody);
+
+      if (!response.valid) {
+        toast.error("Invalid or expired code");
+        return;
+      }
 
       // Create user account after verification
       await account.create(ID.unique(), email, password, fullName);
@@ -190,7 +197,9 @@ const Auth = () => {
             <Tabs defaultValue={selectedPlan ? "signup" : "signin"} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup" disabled={signupStep === "verify"}>Sign Up</TabsTrigger>
+                <TabsTrigger value="signup" disabled={signupStep === "verify"}>
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -290,29 +299,18 @@ const Auth = () => {
                   </form>
                 ) : (
                   <div className="space-y-6">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleBackToSignupForm}
-                      className="mb-2"
-                    >
+                    <Button variant="ghost" size="sm" onClick={handleBackToSignupForm} className="mb-2">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back
                     </Button>
 
                     <div className="text-center">
                       <h3 className="text-lg font-semibold mb-2">Verify your email</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Enter the 6-digit code sent to {email}
-                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">Enter the 8-digit code sent to {email}</p>
                     </div>
 
                     <div className="flex justify-center">
-                      <InputOTP
-                        maxLength={6}
-                        value={otpCode}
-                        onChange={(value) => setOtpCode(value)}
-                      >
+                      <InputOTP maxLength={8} value={otpCode} onChange={(value) => setOtpCode(value)}>
                         <InputOTPGroup>
                           <InputOTPSlot index={0} />
                           <InputOTPSlot index={1} />
