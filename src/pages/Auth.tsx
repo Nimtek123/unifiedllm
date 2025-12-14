@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Brain, Sparkles, ArrowLeft } from "lucide-react";
-import { account, ID } from "@/integrations/appwrite/client";
+import { account, ID, functions } from "@/integrations/appwrite/client";
 import { supabase } from "@/integrations/supabase/client";
 import ReCAPTCHA from "react-google-recaptcha";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
