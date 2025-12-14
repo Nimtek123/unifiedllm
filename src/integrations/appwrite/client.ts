@@ -86,51 +86,122 @@ export const appwriteDb = {
   },
 };
 
-// Dify API helper that calls the secure edge function
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://trhnhfqkxgbjcrficgek.supabase.co";
+// Dify API helper with direct connections
+const DIFY_API_URL = "https://dify.unified-bi.org/v1";
+const TEAM_MEMBERS_COLLECTION = "team_members";
+
+// Helper to get parent user ID for sub-users
+const getParentUserId = async (userId: string): Promise<string | null> => {
+  try {
+    const query = JSON.stringify({ method: "equal", attribute: "userId", values: [userId] });
+    const result = await appwriteDb.listDocuments(DATABASE_ID, TEAM_MEMBERS_COLLECTION, [query]);
+    if (result.documents && result.documents.length > 0) {
+      return result.documents[0].parentUserId;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+// Helper to get user settings (with sub-user support)
+const getUserCredentials = async (userId: string): Promise<{ datasetId: string; apiKey: string; maxDocuments: number } | null> => {
+  try {
+    // Check if user is a sub-user
+    const parentUserId = await getParentUserId(userId);
+    const effectiveUserId = parentUserId || userId;
+
+    const query = JSON.stringify({ method: "equal", attribute: "userId", values: [effectiveUserId] });
+    const result = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [query]);
+    
+    if (result.documents && result.documents.length > 0) {
+      const settings = result.documents[0];
+      if (settings.datasetId && settings.apiKey) {
+        return {
+          datasetId: settings.datasetId,
+          apiKey: settings.apiKey,
+          maxDocuments: settings.maxDocuments || 5,
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 export const difyApi = {
   listDocuments: async (userId: string) => {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/dify-proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "listDocuments", userId }),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to list documents");
+    const credentials = await getUserCredentials(userId);
+    if (!credentials) {
+      throw new Error("User API settings not configured. Please ask your administrator to configure API settings.");
     }
-    return response.json();
+
+    const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/documents?page=1&limit=100`, {
+      headers: {
+        "Authorization": `Bearer ${credentials.apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Dify API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { ...data, maxDocuments: credentials.maxDocuments };
   },
 
   deleteDocument: async (userId: string, documentId: string) => {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/dify-proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "deleteDocument", userId, documentId }),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to delete document");
+    const credentials = await getUserCredentials(userId);
+    if (!credentials) {
+      throw new Error("User API settings not configured.");
     }
-    return response.json();
+
+    const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/documents/${documentId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${credentials.apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Dify API error: ${response.status}`);
+    }
+
+    return { success: true };
   },
 
-  uploadDocuments: async (userId: string, files: File[]) => {
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    formData.append("userId", userId);
-    formData.append("action", "uploadDocuments");
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/dify-proxy`, {
-      method: "POST",
-      body: formData,
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to upload documents");
+  uploadDocuments: async (userId: string, files: File[], indexingTechnique: string = "high_quality") => {
+    const credentials = await getUserCredentials(userId);
+    if (!credentials) {
+      throw new Error("User API settings not configured.");
     }
-    return response.json();
+
+    const results = [];
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("indexing_technique", indexingTechnique);
+      formData.append("process_rule", JSON.stringify({ mode: "automatic" }));
+
+      const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/document/create_by_file`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${credentials.apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Dify API error: ${response.status}`);
+      }
+
+      results.push(await response.json());
+    }
+
+    return { success: true, results };
   },
 };
 
