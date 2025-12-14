@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,8 +8,6 @@ const corsHeaders = {
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
 const PROJECT_ID = "6921fb6b001624e640e3";
-const DATABASE_ID = "692f6e880008c421e414";
-const COLLECTION_USER_ACCOUNTS = "user_accounts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -28,9 +27,9 @@ serve(async (req) => {
     const APPWRITE_API_KEY = Deno.env.get("APPWRITE_API_KEY");
     const normalizedEmail = email.toLowerCase();
     
-    // Check if user already exists
+    // Check if user already exists in Appwrite
     const usersResponse = await fetch(
-      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
+      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(JSON.stringify(["equal(\"email\", [\"" + normalizedEmail + "\"])"]))}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -41,6 +40,7 @@ serve(async (req) => {
     );
 
     const usersData = await usersResponse.json();
+    console.log("Users check response:", usersData);
     
     if (usersData.users && usersData.users.length > 0) {
       return new Response(
@@ -49,77 +49,38 @@ serve(async (req) => {
       );
     }
 
-    // Generate random 6-character code
+    // Generate random 6-digit code
     const characters = "0123456789";
     let verificationCode = "";
     for (let i = 0; i < 6; i++) {
       verificationCode += characters.charAt(Math.floor(Math.random() * characters.length));
     }
 
-    // Check if document exists for this email in user_accounts
-    const existingDocsResponse = await fetch(
-      `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Appwrite-Project": PROJECT_ID,
-          "X-Appwrite-Key": APPWRITE_API_KEY!,
-        },
-      }
-    );
+    // Use Supabase to store the verification code
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const existingDocs = await existingDocsResponse.json();
-    console.log("Existing docs for email:", existingDocs);
+    // Delete any existing codes for this email
+    await supabase
+      .from("password_reset_codes")
+      .delete()
+      .eq("email", normalizedEmail);
 
-    if (existingDocs.documents && existingDocs.documents.length > 0) {
-      // Update existing document with new verification code
-      const docId = existingDocs.documents[0].$id;
-      const updateResponse = await fetch(
-        `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents/${docId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Appwrite-Project": PROJECT_ID,
-            "X-Appwrite-Key": APPWRITE_API_KEY!,
-          },
-          body: JSON.stringify({
-            data: { security_code: verificationCode },
-          }),
-        }
-      );
+    // Insert new verification code with 15 minute expiry
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const { error: insertError } = await supabase
+      .from("password_reset_codes")
+      .insert({
+        email: normalizedEmail,
+        security_code: verificationCode,
+        expires_at: expiresAt,
+        used: false,
+      });
 
-      if (!updateResponse.ok) {
-        const error = await updateResponse.json();
-        console.error("Error updating verification code:", error);
-        throw new Error("Failed to update verification code");
-      }
-    } else {
-      // Create new document
-      const createResponse = await fetch(
-        `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${COLLECTION_USER_ACCOUNTS}/documents`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Appwrite-Project": PROJECT_ID,
-            "X-Appwrite-Key": APPWRITE_API_KEY!,
-          },
-          body: JSON.stringify({
-            documentId: "unique()",
-            data: {
-              email: normalizedEmail,
-              security_code: verificationCode,
-            },
-          }),
-        }
-      );
-
-      if (!createResponse.ok) {
-        const error = await createResponse.json();
-        console.error("Error creating verification code:", error);
-        throw new Error("Failed to create verification code");
-      }
+    if (insertError) {
+      console.error("Error storing verification code:", insertError);
+      throw new Error("Failed to store verification code");
     }
 
     console.log(`Verification code for ${normalizedEmail}: ${verificationCode}`);
