@@ -84,6 +84,33 @@ const Auth = () => {
     }
   };
 
+  const handleResendVerificationCode = async () => {
+    setIsLoading(true);
+
+    try {
+      // Call an Appwrite function to handle everything
+      const execution = await functions.createExecution(
+        "693ca01700141790a74b", // Your function ID
+        JSON.stringify({
+          email: email,
+          action: "send_reset_code", // Specify action
+        }),
+      );
+
+      const response = JSON.parse(execution.responseBody);
+
+      if (response.success) {
+        toast.success("Verification code sent to your email");
+      } else {
+        toast.error(response.error || "Failed to send reset code");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send verification code");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleVerifyAndSignUp = async () => {
     if (otpCode.length !== 6) {
       toast.error("Please enter the 6-digit verification code");
@@ -334,7 +361,7 @@ const Auth = () => {
                       Didn't receive the code?{" "}
                       <button
                         type="button"
-                        onClick={handleSendVerificationCode}
+                        onClick={handleResendVerificationCode}
                         className="text-primary hover:underline"
                         disabled={isLoading}
                       >
