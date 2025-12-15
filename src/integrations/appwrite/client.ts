@@ -163,7 +163,17 @@ export const difyApi = {
       },
       body: JSON.stringify({
         name,
+        description: "",
+        indexing_technique: "high_quality",
         permission: "only_me",
+        provider: "vendor",
+        embedding_model: "nomic-embed-text",
+        retrieval_model: {
+          search_method: "hybrid_search",
+          reranking_enable: false,
+          score_threshold_enabled: true,
+          top_k: 3
+        }
       }),
     });
 
