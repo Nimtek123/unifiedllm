@@ -86,9 +86,15 @@ export const appwriteDb = {
   },
 };
 
+// List all users from Appwrite
+export const listAppwriteUsers = async () => {
+  return appwriteFetch("/users");
+};
+
 // Dify API helper with direct connections
 const DIFY_API_URL = "https://dify.unified-bi.org/v1";
 const TEAM_MEMBERS_COLLECTION = "team_members";
+const DIFY_ADMIN_API_KEY = "dataset-IZTSbWRnkOLUt5DKaI8V3W9WGu44LlJRz1mBYPQIIYQM5kMzF5LQeY8lNB8jLSJr"; // Admin key for dataset management
 
 // Helper to get parent user ID for sub-users
 const getParentUserId = async (userId: string): Promise<string | null> => {
@@ -131,6 +137,43 @@ const getUserCredentials = async (userId: string): Promise<{ datasetId: string; 
 };
 
 export const difyApi = {
+  // Admin function: List all datasets
+  listDatasets: async () => {
+    const response = await fetch(`${DIFY_API_URL}/datasets?page=1&limit=100`, {
+      headers: {
+        "Authorization": `Bearer ${DIFY_ADMIN_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Dify API error: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  // Admin function: Create a new dataset
+  createDataset: async (name: string) => {
+    const response = await fetch(`${DIFY_API_URL}/datasets`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${DIFY_ADMIN_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        permission: "only_me",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Dify API error: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
   listDocuments: async (userId: string) => {
     const credentials = await getUserCredentials(userId);
     if (!credentials) {

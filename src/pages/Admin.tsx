@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID } from "@/integrations/appwrite/client";
-import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Users, Search, Trash2, Edit2, Save, X, UserPlus, Bot, Plus } from "lucide-react";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID, listAppwriteUsers, difyApi } from "@/integrations/appwrite/client";
+import { ArrowLeft, Users, Search, Trash2, Edit2, Save, X, UserPlus, Bot, Plus, Database } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +22,25 @@ interface UserSettings {
 }
 
 interface LLMItem {
-  id: string;
+  $id: string;
   userId: string;
   llmId: string;
   llm_name: string;
-  created_at: string;
+  createdAt: string;
+}
+
+interface AppwriteUser {
+  $id: string;
+  email: string;
+  name: string;
+  labels: string[];
+}
+
+interface DifyDataset {
+  id: string;
+  name: string;
+  document_count: number;
+  created_at: number;
 }
 
 const Admin = () => {
@@ -47,6 +60,10 @@ const Admin = () => {
     maxDocuments: 5,
   });
 
+  // Appwrite users and Dify datasets
+  const [appwriteUsers, setAppwriteUsers] = useState<AppwriteUser[]>([]);
+  const [difyDatasets, setDifyDatasets] = useState<DifyDataset[]>([]);
+
   // LLM Management State
   const [llmList, setLlmList] = useState<LLMItem[]>([]);
   const [llmSearchTerm, setLlmSearchTerm] = useState("");
@@ -58,6 +75,12 @@ const Admin = () => {
   });
   const [editingLlmId, setEditingLlmId] = useState<string | null>(null);
   const [editLlmForm, setEditLlmForm] = useState<Partial<LLMItem>>({});
+
+  // Knowledge Base state
+  const [kbSearchTerm, setKbSearchTerm] = useState("");
+  const [showCreateKbModal, setShowCreateKbModal] = useState(false);
+  const [newKbName, setNewKbName] = useState("");
+  const [creatingKb, setCreatingKb] = useState(false);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -75,7 +98,7 @@ const Admin = () => {
       }
 
       setIsAdmin(true);
-      await Promise.all([loadUserSettings(), loadLlmList()]);
+      await Promise.all([loadUserSettings(), loadLlmList(), loadAppwriteUsers(), loadDifyDatasets()]);
     } catch (error: any) {
       if (error.code === 401) {
         navigate("/auth");
@@ -101,11 +124,28 @@ const Admin = () => {
   const loadLlmList = async () => {
     try {
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.LLM_LIST);
-
-      setLlmList(response.documents);
+      setLlmList(response.documents as unknown as LLMItem[]);
     } catch (error: any) {
       toast.error("Failed to load LLM list");
       console.error(error);
+    }
+  };
+
+  const loadAppwriteUsers = async () => {
+    try {
+      const response = await listAppwriteUsers();
+      setAppwriteUsers(response.users || []);
+    } catch (error: any) {
+      console.error("Failed to load Appwrite users:", error);
+    }
+  };
+
+  const loadDifyDatasets = async () => {
+    try {
+      const response = await difyApi.listDatasets();
+      setDifyDatasets(response.data || []);
+    } catch (error: any) {
+      console.error("Failed to load Dify datasets:", error);
     }
   };
 
@@ -176,7 +216,7 @@ const Admin = () => {
     }
   };
 
-  // LLM Management Functions
+  // LLM Management Functions - using appwriteDb for single row updates
   const handleCreateLlm = async () => {
     if (!newLlmForm.userId || !newLlmForm.llmId || !newLlmForm.llmName) {
       toast.error("All fields are required");
@@ -201,24 +241,19 @@ const Admin = () => {
   };
 
   const handleEditLlm = (llm: LLMItem) => {
-    setEditingLlmId(llm.id);
+    setEditingLlmId(llm.$id);
     setEditLlmForm({
       llmId: llm.llmId,
       llm_name: llm.llm_name,
     });
   };
 
-  const handleSaveLlmEdit = async (llmId: string) => {
+  const handleSaveLlmEdit = async (docId: string) => {
     try {
-      const { error } = await supabase
-        .from("llm_list")
-        .update({
-          llmId: editLlmForm.llmId,
-          llm_name: editLlmForm.llm_name,
-        })
-        .eq("id", llmId);
-
-      if (error) throw error;
+      await appwriteDb.updateDocument(DATABASE_ID, COLLECTIONS.LLM_LIST, docId, {
+        llmId: editLlmForm.llmId,
+        llm_name: editLlmForm.llm_name,
+      });
 
       toast.success("LLM updated successfully");
       setEditingLlmId(null);
@@ -229,18 +264,36 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteLlm = async (llmId: string) => {
+  const handleDeleteLlm = async (docId: string) => {
     if (!confirm("Are you sure you want to delete this LLM assignment?")) return;
 
     try {
-      const { error } = await supabase.from("llm_list").delete().eq("id", llmId);
-
-      if (error) throw error;
-
+      await appwriteDb.deleteDocument(DATABASE_ID, COLLECTIONS.LLM_LIST, docId);
       toast.success("LLM assignment deleted successfully");
       await loadLlmList();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete LLM assignment");
+    }
+  };
+
+  // Knowledge Base functions
+  const handleCreateKnowledgeBase = async () => {
+    if (!newKbName.trim()) {
+      toast.error("Knowledge base name is required");
+      return;
+    }
+
+    setCreatingKb(true);
+    try {
+      await difyApi.createDataset(newKbName.trim());
+      toast.success("Knowledge base created successfully");
+      setShowCreateKbModal(false);
+      setNewKbName("");
+      await loadDifyDatasets();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create knowledge base");
+    } finally {
+      setCreatingKb(false);
     }
   };
 
@@ -257,6 +310,12 @@ const Admin = () => {
       llm.llmId?.toLowerCase().includes(llmSearchTerm.toLowerCase()),
   );
 
+  const filteredDatasets = difyDatasets.filter(
+    (ds) =>
+      ds.name?.toLowerCase().includes(kbSearchTerm.toLowerCase()) ||
+      ds.id?.toLowerCase().includes(kbSearchTerm.toLowerCase()),
+  );
+
   const getAccountBadge = (accountType: string | null) => {
     switch (accountType) {
       case "paid":
@@ -266,6 +325,22 @@ const Admin = () => {
       default:
         return <Badge variant="secondary">Free</Badge>;
     }
+  };
+
+  const getUserDisplayName = (userId: string) => {
+    const user = appwriteUsers.find((u) => u.$id === userId);
+    if (user) {
+      return user.email || user.name || userId.substring(0, 12) + "...";
+    }
+    return userId.substring(0, 12) + "...";
+  };
+
+  const getDatasetDisplayName = (datasetId: string) => {
+    const dataset = difyDatasets.find((d) => d.id === datasetId);
+    if (dataset) {
+      return dataset.name;
+    }
+    return datasetId ? datasetId.substring(0, 12) + "..." : "-";
   };
 
   if (loading) {
@@ -298,7 +373,7 @@ const Admin = () => {
             <Users className="h-8 w-8 text-primary" />
             <div>
               <h2 className="text-3xl font-bold">Admin Panel</h2>
-              <p className="text-muted-foreground">Manage users, settings, and LLM assignments.</p>
+              <p className="text-muted-foreground">Manage users, settings, LLM assignments, and knowledge bases.</p>
             </div>
           </div>
         </div>
@@ -312,6 +387,10 @@ const Admin = () => {
             <TabsTrigger value="llm" className="flex items-center gap-2">
               <Bot className="w-4 h-4" />
               LLM Assignments
+            </TabsTrigger>
+            <TabsTrigger value="kb" className="flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Knowledge Bases
             </TabsTrigger>
           </TabsList>
 
@@ -345,8 +424,8 @@ const Admin = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>User ID</TableHead>
-                        <TableHead>Dataset ID</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Dataset</TableHead>
                         <TableHead>API Key</TableHead>
                         <TableHead>Account Type</TableHead>
                         <TableHead>Max Documents</TableHead>
@@ -364,18 +443,26 @@ const Admin = () => {
                       ) : (
                         filteredSettings.map((settings) => (
                           <TableRow key={settings.$id}>
-                            <TableCell className="font-mono text-xs">{settings.userId?.substring(0, 12)}...</TableCell>
+                            <TableCell className="font-mono text-xs">{getUserDisplayName(settings.userId)}</TableCell>
                             <TableCell>
                               {editingId === settings.$id ? (
-                                <Input
+                                <Select
                                   value={editForm.datasetId || ""}
-                                  onChange={(e) => setEditForm({ ...editForm, datasetId: e.target.value })}
-                                  className="h-8"
-                                />
+                                  onValueChange={(value) => setEditForm({ ...editForm, datasetId: value })}
+                                >
+                                  <SelectTrigger className="h-8 w-48">
+                                    <SelectValue placeholder="Select dataset" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {difyDatasets.map((ds) => (
+                                      <SelectItem key={ds.id} value={ds.id}>
+                                        {ds.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               ) : (
-                                <span className="font-mono text-xs">
-                                  {settings.datasetId ? `${settings.datasetId.substring(0, 12)}...` : "-"}
-                                </span>
+                                <span className="text-xs">{getDatasetDisplayName(settings.datasetId)}</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -473,7 +560,7 @@ const Admin = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>LLM Assignments</CardTitle>
-                  <CardDescription>Assign LLM IDs to users and team members.</CardDescription>
+                  <CardDescription>Assign LLM IDs to users and team members (one row at a time).</CardDescription>
                 </div>
                 <Button onClick={() => setShowLlmModal(true)}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -497,7 +584,7 @@ const Admin = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>User ID</TableHead>
+                        <TableHead>User</TableHead>
                         <TableHead>LLM ID</TableHead>
                         <TableHead>LLM Name</TableHead>
                         <TableHead>Created</TableHead>
@@ -513,10 +600,10 @@ const Admin = () => {
                         </TableRow>
                       ) : (
                         filteredLlmList.map((llm) => (
-                          <TableRow key={llm.id}>
-                            <TableCell className="font-mono text-xs">{llm.userId?.substring(0, 12)}...</TableCell>
+                          <TableRow key={llm.$id}>
+                            <TableCell className="font-mono text-xs">{getUserDisplayName(llm.userId)}</TableCell>
                             <TableCell>
-                              {editingLlmId === llm.id ? (
+                              {editingLlmId === llm.$id ? (
                                 <Input
                                   value={editLlmForm.llmId || ""}
                                   onChange={(e) => setEditLlmForm({ ...editLlmForm, llmId: e.target.value })}
@@ -527,7 +614,7 @@ const Admin = () => {
                               )}
                             </TableCell>
                             <TableCell>
-                              {editingLlmId === llm.id ? (
+                              {editingLlmId === llm.$id ? (
                                 <Input
                                   value={editLlmForm.llm_name || ""}
                                   onChange={(e) => setEditLlmForm({ ...editLlmForm, llm_name: e.target.value })}
@@ -538,12 +625,12 @@ const Admin = () => {
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-xs">
-                              {new Date(llm.created_at).toLocaleDateString()}
+                              {llm.createdAt ? new Date(llm.createdAt).toLocaleDateString() : "-"}
                             </TableCell>
                             <TableCell className="text-right">
-                              {editingLlmId === llm.id ? (
+                              {editingLlmId === llm.$id ? (
                                 <div className="flex justify-end gap-2">
-                                  <Button size="sm" variant="ghost" onClick={() => handleSaveLlmEdit(llm.id)}>
+                                  <Button size="sm" variant="ghost" onClick={() => handleSaveLlmEdit(llm.$id)}>
                                     <Save className="h-4 w-4" />
                                   </Button>
                                   <Button
@@ -566,7 +653,7 @@ const Admin = () => {
                                     size="sm"
                                     variant="ghost"
                                     className="text-destructive"
-                                    onClick={() => handleDeleteLlm(llm.id)}
+                                    onClick={() => handleDeleteLlm(llm.$id)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -584,6 +671,70 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Knowledge Bases Tab */}
+          <TabsContent value="kb">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Knowledge Bases</CardTitle>
+                  <CardDescription>View and create Dify knowledge bases (datasets).</CardDescription>
+                </div>
+                <Button onClick={() => setShowCreateKbModal(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Knowledge Base
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or ID..."
+                      value={kbSearchTerm}
+                      onChange={(e) => setKbSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Documents</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDatasets.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            No knowledge bases found.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredDatasets.map((ds) => (
+                          <TableRow key={ds.id}>
+                            <TableCell className="font-medium">{ds.name}</TableCell>
+                            <TableCell className="font-mono text-xs">{ds.id}</TableCell>
+                            <TableCell>{ds.document_count || 0}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs">
+                              {ds.created_at ? new Date(ds.created_at * 1000).toLocaleDateString() : "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-4">Total knowledge bases: {filteredDatasets.length}</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -597,20 +748,40 @@ const Admin = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">User ID *</label>
-                <Input
+                <label className="text-sm font-medium">User *</label>
+                <Select
                   value={newSettingsForm.userId}
-                  onChange={(e) => setNewSettingsForm({ ...newSettingsForm, userId: e.target.value })}
-                  placeholder="Enter Appwrite user ID"
-                />
+                  onValueChange={(value) => setNewSettingsForm({ ...newSettingsForm, userId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appwriteUsers.map((user) => (
+                      <SelectItem key={user.$id} value={user.$id}>
+                        {user.email || user.name || user.$id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Dataset ID</label>
-                <Input
+                <label className="text-sm font-medium">Dataset</label>
+                <Select
                   value={newSettingsForm.datasetId}
-                  onChange={(e) => setNewSettingsForm({ ...newSettingsForm, datasetId: e.target.value })}
-                  placeholder="Enter dataset ID"
-                />
+                  onValueChange={(value) => setNewSettingsForm({ ...newSettingsForm, datasetId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select dataset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {difyDatasets.map((ds) => (
+                      <SelectItem key={ds.id} value={ds.id}>
+                        {ds.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">API Key</label>
@@ -667,12 +838,22 @@ const Admin = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">User ID *</label>
-                <Input
+                <label className="text-sm font-medium">User *</label>
+                <Select
                   value={newLlmForm.userId}
-                  onChange={(e) => setNewLlmForm({ ...newLlmForm, userId: e.target.value })}
-                  placeholder="Enter user ID (user or team member)"
-                />
+                  onValueChange={(value) => setNewLlmForm({ ...newLlmForm, userId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appwriteUsers.map((user) => (
+                      <SelectItem key={user.$id} value={user.$id}>
+                        {user.email || user.name || user.$id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">LLM ID *</label>
@@ -696,6 +877,36 @@ const Admin = () => {
                 </Button>
                 <Button className="flex-1" onClick={handleCreateLlm}>
                   Add Assignment
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Create Knowledge Base Modal */}
+      {showCreateKbModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>Create Knowledge Base</CardTitle>
+              <CardDescription>Create a new Dify knowledge base (dataset)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name *</label>
+                <Input
+                  value={newKbName}
+                  onChange={(e) => setNewKbName(e.target.value)}
+                  placeholder="Enter knowledge base name"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setShowCreateKbModal(false)}>
+                  Cancel
+                </Button>
+                <Button className="flex-1" onClick={handleCreateKnowledgeBase} disabled={creatingKb}>
+                  {creatingKb ? "Creating..." : "Create"}
                 </Button>
               </div>
             </CardContent>
