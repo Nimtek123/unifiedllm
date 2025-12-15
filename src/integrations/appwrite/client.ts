@@ -94,7 +94,7 @@ export const listAppwriteUsers = async () => {
 // Dify API helper with direct connections
 const DIFY_API_URL = "https://dify.unified-bi.org/v1";
 const TEAM_MEMBERS_COLLECTION = "team_members";
-const DIFY_ADMIN_API_KEY = "dataset-IZTSbWRnkOLUt5DKaI8V3W9WGu44LlJRz1mBYPQIIYQM5kMzF5LQeY8lNB8jLSJr"; // Admin key for dataset management
+const DIFY_ADMIN_API_KEY = "dataset-23ugfOohnF0IKLwMPXkiZ6Sq"; // Admin key for dataset management
 
 // Helper to get parent user ID for sub-users
 const getParentUserId = async (userId: string): Promise<string | null> => {
