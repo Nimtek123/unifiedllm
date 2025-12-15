@@ -120,14 +120,14 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Verify the code
-      // Call the edge function
-      const execution = await functions.createExecution("693cc640003623bac07b", JSON.stringify({ email, code }));
+      // Verify the code via Appwrite function
+      const execution = await functions.createExecution("693cc640003623bac07b", JSON.stringify({ email, code: otpCode }));
 
       const response = JSON.parse(execution.responseBody);
 
       if (!response.valid) {
         toast.error("Invalid or expired code");
+        setIsLoading(false);
         return;
       }
 
