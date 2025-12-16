@@ -191,7 +191,7 @@ const Settings = () => {
                     onClick={() => {
                       const subject = encodeURIComponent("Request Free API Keys");
                       const body = encodeURIComponent(
-                        "I would like to request free API keys for the Unified LLM Portal.\n\nPlease provide me with:\n- Dataset ID\n- API Key",
+                        "I would like to request free Account for the Unified LLM Portal.\n\n",
                       );
                       window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
                     }}
@@ -235,9 +235,7 @@ const Settings = () => {
                         variant="outline"
                         onClick={() => {
                           const subject = encodeURIComponent(`Upgrade Request: ${plan.name}`);
-                          const body = encodeURIComponent(
-                            `I would like to upgrade to ${plan.name} plan.\n\nDataset ID: ${datasetId || "Not set"}\nAPI Key: ${apiKey ? "****" + apiKey.slice(-4) : "Not set"}`,
-                          );
+                          const body = encodeURIComponent(`I would like to upgrade to ${plan.name} plan.\n\n}`);
                           window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
                         }}
                       >
