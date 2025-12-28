@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Brain, Sparkles, ArrowLeft } from "lucide-react";
-import { account, ID, functions } from "@/integrations/appwrite/client";
+import { account, ID } from "@/integrations/appwrite/client";
 import { supabase } from "@/integrations/supabase/client";
 import ReCAPTCHA from "react-google-recaptcha";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -58,22 +58,20 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Call an Appwrite function to handle everything
-      const execution = await functions.createExecution(
-        "693ca01700141790a74b", // Your function ID
-        JSON.stringify({
-          email: email,
-          action: "send_reset_code", // Specify action
-        }),
-      );
+      // Call Supabase edge function to send verification code
+      const { data, error } = await supabase.functions.invoke("send-verification-code", {
+        body: { email },
+      });
 
-      const response = JSON.parse(execution.responseBody);
+      if (error) {
+        throw error;
+      }
 
-      if (response.success) {
+      if (data?.success) {
         toast.success("Verification code sent to your email");
         setSignupStep("verify");
       } else {
-        toast.error(response.error || "Failed to send reset code");
+        toast.error(data?.error || "Failed to send verification code");
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to send verification code");
@@ -88,21 +86,19 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Call an Appwrite function to handle everything
-      const execution = await functions.createExecution(
-        "693ca01700141790a74b", // Your function ID
-        JSON.stringify({
-          email: email,
-          action: "send_reset_code", // Specify action
-        }),
-      );
+      // Call Supabase edge function to resend verification code
+      const { data, error } = await supabase.functions.invoke("send-verification-code", {
+        body: { email },
+      });
 
-      const response = JSON.parse(execution.responseBody);
+      if (error) {
+        throw error;
+      }
 
-      if (response.success) {
+      if (data?.success) {
         toast.success("Verification code sent to your email");
       } else {
-        toast.error(response.error || "Failed to send reset code");
+        toast.error(data?.error || "Failed to send verification code");
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to send verification code");
@@ -120,13 +116,13 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Verify the code via Appwrite function
-      const execution = await functions.createExecution("693cc640003623bac07b", JSON.stringify({ email, code: otpCode }));
+      // Verify the code via Supabase edge function
+      const { data, error } = await supabase.functions.invoke("verify-email-code", {
+        body: { email, code: otpCode },
+      });
 
-      const response = JSON.parse(execution.responseBody);
-
-      if (!response.valid) {
-        toast.error("Invalid or expired code");
+      if (error || !data?.success) {
+        toast.error(data?.error || "Invalid or expired code");
         setIsLoading(false);
         return;
       }
