@@ -22,7 +22,7 @@ export const COLLECTIONS = {
 
 // API Key for server-side operations (used when session cookies don't work)
 const API_KEY =
-  "standard_7e09b4939bca901fe26ba745737c6c674cb4ccb4a9acf1b13a2e1a88e6529613793e0e505d84257f2841e7c415921606a204320960828ea771b62adea751a198dce1638fa30a4f5ee762ee9522914dcd16df3f0cee8e1dc8b4a700f8f9af2418ad21ee55df621693c7f32fc8666a0371a9e95d70e2b184c4b7a28499421f3e70";
+  "standard_53669402f9a8017a6e177717a6dabac39f9551daea2929a2701b2afadac7cd530fb0a9ec21143a435fd0bd6dbcaa20f2715c3225084855828f001ae5a68080500d77350bb8c46cc874c918ee2f18d888569259b6ada96085599512131dccb2fdeccf1d1b35aa6c8dc55bfdbc5c3899d0b82f76c4c333a1b0121629d103c2cf4c";
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
 const PROJECT_ID = "6921fb6b001624e640e3";
@@ -111,7 +111,9 @@ const getParentUserId = async (userId: string): Promise<string | null> => {
 };
 
 // Helper to get user settings (with sub-user support)
-const getUserCredentials = async (userId: string): Promise<{ datasetId: string; apiKey: string; maxDocuments: number } | null> => {
+const getUserCredentials = async (
+  userId: string,
+): Promise<{ datasetId: string; apiKey: string; maxDocuments: number } | null> => {
   try {
     // Check if user is a sub-user
     const parentUserId = await getParentUserId(userId);
@@ -119,7 +121,7 @@ const getUserCredentials = async (userId: string): Promise<{ datasetId: string; 
 
     const query = JSON.stringify({ method: "equal", attribute: "userId", values: [effectiveUserId] });
     const result = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [query]);
-    
+
     if (result.documents && result.documents.length > 0) {
       const settings = result.documents[0];
       if (settings.datasetId && settings.apiKey) {
@@ -141,7 +143,7 @@ export const difyApi = {
   listDatasets: async () => {
     const response = await fetch(`${DIFY_API_URL}/datasets?page=1&limit=100`, {
       headers: {
-        "Authorization": `Bearer ${DIFY_ADMIN_API_KEY}`,
+        Authorization: `Bearer ${DIFY_ADMIN_API_KEY}`,
         "Content-Type": "application/json",
       },
     });
@@ -158,7 +160,7 @@ export const difyApi = {
     const response = await fetch(`${DIFY_API_URL}/datasets`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${DIFY_ADMIN_API_KEY}`,
+        Authorization: `Bearer ${DIFY_ADMIN_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -172,8 +174,8 @@ export const difyApi = {
           search_method: "hybrid_search",
           reranking_enable: false,
           score_threshold_enabled: true,
-          top_k: 3
-        }
+          top_k: 3,
+        },
       }),
     });
 
@@ -192,7 +194,7 @@ export const difyApi = {
 
     const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/documents?page=1&limit=100`, {
       headers: {
-        "Authorization": `Bearer ${credentials.apiKey}`,
+        Authorization: `Bearer ${credentials.apiKey}`,
         "Content-Type": "application/json",
       },
     });
@@ -214,7 +216,7 @@ export const difyApi = {
     const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/documents/${documentId}`, {
       method: "DELETE",
       headers: {
-        "Authorization": `Bearer ${credentials.apiKey}`,
+        Authorization: `Bearer ${credentials.apiKey}`,
         "Content-Type": "application/json",
       },
     });
@@ -242,7 +244,7 @@ export const difyApi = {
       const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/document/create_by_file`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${credentials.apiKey}`,
+          Authorization: `Bearer ${credentials.apiKey}`,
         },
         body: formData,
       });
