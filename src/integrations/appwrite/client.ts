@@ -111,7 +111,9 @@ const getParentUserId = async (userId: string): Promise<string | null> => {
 };
 
 // Helper to get user settings (with sub-user support)
-const getUserCredentials = async (userId: string): Promise<{ datasetId: string; apiKey: string; maxDocuments: number } | null> => {
+const getUserCredentials = async (
+  userId: string,
+): Promise<{ datasetId: string; apiKey: string; maxDocuments: number } | null> => {
   try {
     // Check if user is a sub-user
     const parentUserId = await getParentUserId(userId);
@@ -119,7 +121,7 @@ const getUserCredentials = async (userId: string): Promise<{ datasetId: string; 
 
     const query = JSON.stringify({ method: "equal", attribute: "userId", values: [effectiveUserId] });
     const result = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [query]);
-    
+
     if (result.documents && result.documents.length > 0) {
       const settings = result.documents[0];
       if (settings.datasetId && settings.apiKey) {
@@ -141,7 +143,7 @@ export const difyApi = {
   listDatasets: async () => {
     const response = await fetch(`${DIFY_API_URL}/datasets?page=1&limit=100`, {
       headers: {
-        "Authorization": `Bearer ${DIFY_ADMIN_API_KEY}`,
+        Authorization: `Bearer ${DIFY_ADMIN_API_KEY}`,
         "Content-Type": "application/json",
       },
     });
@@ -158,7 +160,7 @@ export const difyApi = {
     const response = await fetch(`${DIFY_API_URL}/datasets`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${DIFY_ADMIN_API_KEY}`,
+        Authorization: `Bearer ${DIFY_ADMIN_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -172,8 +174,8 @@ export const difyApi = {
           search_method: "hybrid_search",
           reranking_enable: false,
           score_threshold_enabled: true,
-          top_k: 3
-        }
+          top_k: 3,
+        },
       }),
     });
 
@@ -192,7 +194,7 @@ export const difyApi = {
 
     const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/documents?page=1&limit=100`, {
       headers: {
-        "Authorization": `Bearer ${credentials.apiKey}`,
+        Authorization: `Bearer ${credentials.apiKey}`,
         "Content-Type": "application/json",
       },
     });
@@ -214,7 +216,7 @@ export const difyApi = {
     const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/documents/${documentId}`, {
       method: "DELETE",
       headers: {
-        "Authorization": `Bearer ${credentials.apiKey}`,
+        Authorization: `Bearer ${credentials.apiKey}`,
         "Content-Type": "application/json",
       },
     });
@@ -242,7 +244,7 @@ export const difyApi = {
       const response = await fetch(`${DIFY_API_URL}/datasets/${credentials.datasetId}/document/create_by_file`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${credentials.apiKey}`,
+          Authorization: `Bearer ${credentials.apiKey}`,
         },
         body: formData,
       });
