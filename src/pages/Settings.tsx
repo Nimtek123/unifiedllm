@@ -135,43 +135,6 @@ const Settings = () => {
     }
   };
 
-  const sendPing = async () => {
-    if (status === "loading") return;
-    setStatus("loading");
-    try {
-      const result = await client.ping();
-      const log: PingLog = {
-        date: new Date(),
-        method: "GET",
-        path: "/v1/ping",
-        status: 200,
-        response: JSON.stringify(result),
-      };
-      setLogs((prevLogs) => [log, ...prevLogs]);
-      setStatus("success");
-      toast({
-        title: "Ping Successful",
-        description: "Server is online and responding",
-      });
-    } catch (err) {
-      const log: PingLog = {
-        date: new Date(),
-        method: "GET",
-        path: "/v1/ping",
-        status: err instanceof AppwriteException ? err.code : 500,
-        response: err instanceof AppwriteException ? err.message : "Something went wrong",
-      };
-      setLogs((prevLogs) => [log, ...prevLogs]);
-      setStatus("error");
-      toast({
-        title: "Ping Failed",
-        description: log.response,
-        variant: "destructive",
-      });
-    }
-    setShowLogs(true);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -285,74 +248,6 @@ const Settings = () => {
                 ))}
               </CardContent>
             </Card>
-      <Card>
-            <CardHeader>
-              <CardTitle>Server Connection</CardTitle>
-              <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-base font-medium">Server Status</Label>
-                    {status !== "idle" && (
-                      <Badge
-                        variant={status === "success" ? "default" : status === "error" ? "destructive" : "secondary"}
-                      >
-                        {status === "success" ? "Online" : status === "error" ? "Error" : "Testing..."}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Endpoint: {import.meta.env.VITE_APPWRITE_ENDPOINT}</p>
-                </div>
-                <Button onClick={sendPing} disabled={status === "loading"} variant="outline">
-                  {status === "loading" ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Pinging...
-                    </>
-                  ) : (
-                    <>
-                      <Activity className="mr-2 h-4 w-4" />
-                      Send Ping
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {showLogs && logs.length > 0 && (
-                <div className="mt-6 space-y-2">
-                  <Label className="text-base font-medium">Request Log</Label>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Method</TableHead>
-                          <TableHead>Path</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Response</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {logs.slice(0, 5).map((log, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="text-xs">{log.date.toLocaleTimeString()}</TableCell>
-                            <TableCell className="text-xs font-mono">{log.method}</TableCell>
-                            <TableCell className="text-xs font-mono">{log.path}</TableCell>
-                            <TableCell>
-                              <Badge variant={log.status === 200 ? "default" : "destructive"}>{log.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-xs max-w-xs truncate">{log.response}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
           )}
         </div>
       </main>
