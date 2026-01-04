@@ -246,7 +246,46 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
-          <Card>
+          
+
+          {/* Upgrade Account Card */}
+          {!isSubUser && !isAdmin && (
+            <Card className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
+              <CardHeader>
+                <CardTitle>Upgrade Account</CardTitle>
+                <CardDescription>Request an upgrade to increase your document limit.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {pricingPlans.map((plan) => (
+                  <div
+                    key={plan.name}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div>
+                      <h4 className="font-medium">{plan.name}</h4>
+                      <p className="text-sm text-muted-foreground">{plan.description}</p>
+                      <p className="text-sm text-muted-foreground">{plan.docs} documents</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{plan.price}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const subject = encodeURIComponent(`Upgrade Request: ${plan.name}`);
+                          const body = encodeURIComponent(`I would like to upgrade to ${plan.name} plan.\n\n}`);
+                          window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
+                        }}
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        Request
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+      <Card>
             <CardHeader>
               <CardTitle>Server Connection</CardTitle>
               <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
@@ -314,44 +353,6 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* Upgrade Account Card */}
-          {!isSubUser && !isAdmin && (
-            <Card className="animate-slide-up" style={{ animationDelay: "0.05s" }}>
-              <CardHeader>
-                <CardTitle>Upgrade Account</CardTitle>
-                <CardDescription>Request an upgrade to increase your document limit.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {pricingPlans.map((plan) => (
-                  <div
-                    key={plan.name}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div>
-                      <h4 className="font-medium">{plan.name}</h4>
-                      <p className="text-sm text-muted-foreground">{plan.description}</p>
-                      <p className="text-sm text-muted-foreground">{plan.docs} documents</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold">{plan.price}</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const subject = encodeURIComponent(`Upgrade Request: ${plan.name}`);
-                          const body = encodeURIComponent(`I would like to upgrade to ${plan.name} plan.\n\n}`);
-                          window.open(`mailto:info@unified-bi.org?subject=${subject}&body=${body}`);
-                        }}
-                      >
-                        <Mail className="h-4 w-4 mr-1" />
-                        Request
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
           )}
         </div>
       </main>
