@@ -30,6 +30,7 @@ const Auth = () => {
 
   useEffect(() => {
     setCheckingSession(false);
+    document.cookie = "a_session=; expires=...";
   }, []);
 
   if (checkingSession) {
