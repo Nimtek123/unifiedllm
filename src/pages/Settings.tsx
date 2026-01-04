@@ -5,10 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID, Query } from "@/integrations/appwrite/client";
-import { AlertTriangle, Eye, EyeOff, Save, ArrowLeft, Crown, Mail, Shield } from "lucide-react";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID, Query, client } from "@/integrations/appwrite/client";
+import { AlertTriangle, Eye, EyeOff, Save, ArrowLeft, Crown, Mail, Shield, Activity, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface PingLog {
+  date: Date;
+  method: string;
+  path: string;
+  status: number;
+  response: string;
+}
 
 const pricingPlans = [
   { name: "Starter", price: "$25/mo", docs: 50, description: "For solo users and small teams" },
@@ -28,6 +37,9 @@ const Settings = () => {
   const [maxDocuments, setMaxDocuments] = useState(5);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSubUser, setIsSubUser] = useState(false);
+  const [pingStatus, setPingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [pingLogs, setPingLogs] = useState<PingLog[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoadSettings();
@@ -133,6 +145,37 @@ const Settings = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const sendPing = async () => {
+    if (pingStatus === "loading") return;
+    setPingStatus("loading");
+    try {
+      // Test Appwrite connection by getting account health
+      const result = await account.get();
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/account",
+        status: 200,
+        response: `Connected as: ${result.email}`,
+      };
+      setPingLogs((prevLogs) => [log, ...prevLogs]);
+      setPingStatus("success");
+      toast.success("Ping Successful - Server is online and responding");
+    } catch (err: any) {
+      const log: PingLog = {
+        date: new Date(),
+        method: "GET",
+        path: "/v1/account",
+        status: err?.code || 500,
+        response: err?.message || "Something went wrong",
+      };
+      setPingLogs((prevLogs) => [log, ...prevLogs]);
+      setPingStatus("error");
+      toast.error(`Ping Failed: ${log.response}`);
+    }
+    setShowLogs(true);
   };
 
   if (loading) {
@@ -249,6 +292,76 @@ const Settings = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Server Connection Card */}
+          <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <CardHeader>
+              <CardTitle>Server Connection</CardTitle>
+              <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-medium">Server Status</Label>
+                    {pingStatus !== "idle" && (
+                      <Badge
+                        variant={pingStatus === "success" ? "default" : pingStatus === "error" ? "destructive" : "secondary"}
+                      >
+                        {pingStatus === "success" ? "Online" : pingStatus === "error" ? "Error" : "Testing..."}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Endpoint: https://appwrite.unified-bi.org/v1</p>
+                </div>
+                <Button onClick={sendPing} disabled={pingStatus === "loading"} variant="outline">
+                  {pingStatus === "loading" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Pinging...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="mr-2 h-4 w-4" />
+                      Send Ping
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {showLogs && pingLogs.length > 0 && (
+                <div className="mt-6 space-y-2">
+                  <Label className="text-base font-medium">Request Log</Label>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Method</TableHead>
+                          <TableHead>Path</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Response</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pingLogs.slice(0, 5).map((log, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-xs">{log.date.toLocaleTimeString()}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.method}</TableCell>
+                            <TableCell className="text-xs font-mono">{log.path}</TableCell>
+                            <TableCell>
+                              <Badge variant={log.status === 200 ? "default" : "destructive"}>{log.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs max-w-xs truncate">{log.response}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
