@@ -293,8 +293,9 @@ const Settings = () => {
             </Card>
           )}
 
-          {/* Server Connection Card */}
-          <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          {/* Server Connection Card - Admin Only */}
+          {isAdmin && (
+            <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Server Connection</CardTitle>
               <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
@@ -362,6 +363,7 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
       </main>
     </div>
