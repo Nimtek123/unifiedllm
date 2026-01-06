@@ -10,18 +10,13 @@ const plans = [
     price: "$25",
     period: "/mo",
     description: "Solo or small teams",
-    features: [
-      "Up to 50 documents",
-      "Basic LLM queries",
-      "Email support",
-      "Standard processing",
-    ],
+    features: ["Up to 50 documents", "Basic LLM queries", "Email support", "Standard processing"],
     popular: false,
   },
   {
     name: "Business",
     docs: "200 docs",
-    price: "$60",
+    price: "$99",
     period: "/mo",
     description: "SMEs, private KB per user",
     features: [
@@ -36,7 +31,7 @@ const plans = [
   {
     name: "Business+",
     docs: "500 docs",
-    price: "$150",
+    price: "$199",
     period: "/mo",
     description: "Priority support + custom workflows",
     features: [
@@ -65,9 +60,7 @@ const Pricing = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary text-white mb-4 shadow-glow">
             <Brain className="w-8 h-8" />
           </div>
-          <h1 className="text-4xl font-bold text-foreground mb-4">
-            Simple, Transparent Pricing
-          </h1>
+          <h1 className="text-4xl font-bold text-foreground mb-4">Simple, Transparent Pricing</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Choose the plan that fits your needs. Upgrade or downgrade anytime.
           </p>
@@ -121,9 +114,7 @@ const Pricing = () => {
         </div>
 
         <div className="text-center mt-12 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-          <p className="text-muted-foreground">
-            All plans include a 14-day free trial. No credit card required.
-          </p>
+          <p className="text-muted-foreground">All plans include a 14-day free trial. No credit card required.</p>
           <Button variant="link" onClick={() => navigate("/auth")} className="mt-2">
             Already have an account? Sign in
           </Button>
