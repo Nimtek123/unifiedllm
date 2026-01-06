@@ -7,7 +7,7 @@ const plans = [
   {
     name: "Starter",
     docs: "500 docs",
-    price: "$25",
+    price: "$49",
     period: "/mo",
     description: "Solo or small teams",
     features: ["Up to 500 documents", "Basic LLM queries", "Email support", "Standard processing"],
@@ -19,7 +19,13 @@ const plans = [
     price: "$149",
     period: "/mo",
     description: "SMEs, private KB per user",
-    features: ["Up to 5000 documents", "Priority LLM queries", "Private knowledge base", "Email support"],
+    features: [
+      "Up to 5000 documents",
+      "Priority LLM queries",
+      "Private knowledge base",
+      "Email support",
+      "Advanced analytics",
+    ],
     popular: true,
   },
   {
