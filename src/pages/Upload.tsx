@@ -344,7 +344,7 @@ const Upload = () => {
                           disabled={isUploading}
                         />
                         <label htmlFor="file-upload">
-                          <Button asChild variant="outline" disabled={isUploading}>
+                          <Button variant="outline" disabled={isUploading}>
                             <span>Select Files</span>
                           </Button>
                         </label>
