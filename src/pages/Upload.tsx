@@ -27,7 +27,7 @@ const Upload = () => {
     can_manage_users: false,
   });
   const [subUser, setSubUser] = useState(false);
-
+  const files = [];
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
@@ -98,7 +98,6 @@ const Upload = () => {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
     if (files && files.length > 0) {
       setSelectedFiles(Array.from(files));
     }
@@ -121,7 +120,6 @@ const Upload = () => {
     e.stopPropagation();
     setIsDragging(false);
 
-    const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const validFiles = Array.from(files).filter(
         (file) => file.name.endsWith(".pdf") || file.name.endsWith(".docx") || file.name.endsWith(".txt"),
