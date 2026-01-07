@@ -343,11 +343,11 @@ const Upload = () => {
                           onChange={handleFileSelect}
                           disabled={isUploading}
                         />
-                        <label htmlFor="file-upload">
-                          <Button asChild variant="outline" disabled={isUploading}>
-                            <span>Select Files</span>
-                          </Button>
-                        </label>
+                        {/* <label htmlFor="file-upload"> */}
+                        <Button asChild variant="outline" disabled={isUploading}>
+                          <span>Select Files</span>
+                        </Button>
+                        {/* </label> */}
                       </div>
                     </div>
 
