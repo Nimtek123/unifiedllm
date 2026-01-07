@@ -27,7 +27,7 @@ const Upload = () => {
     can_manage_users: false,
   });
   const [subUser, setSubUser] = useState(false);
-  const files = [];
+
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
@@ -98,8 +98,19 @@ const Upload = () => {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
     if (files && files.length > 0) {
-      setSelectedFiles(Array.from(files));
+      // setSelectedFiles(Array.from(files));
+      setSelectedFiles((prev) => {
+        const newFiles = Array.from(files);
+        const map = new Map<string, File>();
+
+        [...prev, ...newFiles].forEach((file) => {
+          map.set(file.name + file.size, file);
+        });
+
+        return Array.from(map.values());
+      });
     }
   };
 
@@ -120,14 +131,30 @@ const Upload = () => {
     e.stopPropagation();
     setIsDragging(false);
 
+    const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const validFiles = Array.from(files).filter(
-        (file) => file.name.endsWith(".pdf") || file.name.endsWith(".docx") || file.name.endsWith(".txt"),
+        (file) =>
+          file.name.endsWith(".csv") ||
+          file.name.endsWith(".xlsx") ||
+          file.name.endsWith(".pdf") ||
+          file.name.endsWith(".docx") ||
+          file.name.endsWith(".txt"),
       );
       if (validFiles.length > 0) {
-        setSelectedFiles(validFiles);
+        // setSelectedFiles(validFiles);
+        setSelectedFiles((prev) => {
+          const newFiles = Array.from(validFiles);
+          const map = new Map<string, File>();
+
+          [...prev, ...newFiles].forEach((file) => {
+            map.set(file.name + file.size, file);
+          });
+
+          return Array.from(map.values());
+        });
       } else {
-        toast.error("Please drop PDF, DOCX, or TXT files only");
+        toast.error("Please drop PDF, DOCX, XLSX, CSV or TXT files only");
       }
     }
   }, []);
