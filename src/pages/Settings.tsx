@@ -20,9 +20,9 @@ interface PingLog {
 }
 
 const pricingPlans = [
-  { name: "Starter", price: "$49/mo", pages: 2,500, description: "For solo users and small teams" },
-  { name: "Business", price: "$199/mo", pages: 25,000, description: "Private KB per user for SMEs" },
-  { name: "Business+", price: "$399/mo", pages: 100,000, description: "Priority support & custom workflows" },
+  { name: "Starter", price: "$25/mo", pages: 2500, description: "For solo users and small teams" },
+  { name: "Business", price: "$60/mo", pages: 25000, description: "Private KB per user for SMEs" },
+  { name: "Business+", price: "$150/mo", pages: 100000, description: "Priority support & custom workflows" },
 ];
 
 const Settings = () => {
@@ -252,7 +252,6 @@ const Settings = () => {
               )}
             </CardContent>
           </Card>
-          
 
           {/* Upgrade Account Card */}
           {!isSubUser && !isAdmin && (
@@ -296,73 +295,75 @@ const Settings = () => {
           {/* Server Connection Card - Admin Only */}
           {isAdmin && (
             <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <CardHeader>
-              <CardTitle>Server Connection</CardTitle>
-              <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-base font-medium">Server Status</Label>
-                    {pingStatus !== "idle" && (
-                      <Badge
-                        variant={pingStatus === "success" ? "default" : pingStatus === "error" ? "destructive" : "secondary"}
-                      >
-                        {pingStatus === "success" ? "Online" : pingStatus === "error" ? "Error" : "Testing..."}
-                      </Badge>
+              <CardHeader>
+                <CardTitle>Server Connection</CardTitle>
+                <CardDescription>Test connectivity to the Appwrite backend server</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-base font-medium">Server Status</Label>
+                      {pingStatus !== "idle" && (
+                        <Badge
+                          variant={
+                            pingStatus === "success" ? "default" : pingStatus === "error" ? "destructive" : "secondary"
+                          }
+                        >
+                          {pingStatus === "success" ? "Online" : pingStatus === "error" ? "Error" : "Testing..."}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Endpoint: https://appwrite.unified-bi.org/v1</p>
+                  </div>
+                  <Button onClick={sendPing} disabled={pingStatus === "loading"} variant="outline">
+                    {pingStatus === "loading" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Pinging...
+                      </>
+                    ) : (
+                      <>
+                        <Activity className="mr-2 h-4 w-4" />
+                        Send Ping
+                      </>
                     )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Endpoint: https://appwrite.unified-bi.org/v1</p>
+                  </Button>
                 </div>
-                <Button onClick={sendPing} disabled={pingStatus === "loading"} variant="outline">
-                  {pingStatus === "loading" ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Pinging...
-                    </>
-                  ) : (
-                    <>
-                      <Activity className="mr-2 h-4 w-4" />
-                      Send Ping
-                    </>
-                  )}
-                </Button>
-              </div>
 
-              {showLogs && pingLogs.length > 0 && (
-                <div className="mt-6 space-y-2">
-                  <Label className="text-base font-medium">Request Log</Label>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Method</TableHead>
-                          <TableHead>Path</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Response</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pingLogs.slice(0, 5).map((log, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="text-xs">{log.date.toLocaleTimeString()}</TableCell>
-                            <TableCell className="text-xs font-mono">{log.method}</TableCell>
-                            <TableCell className="text-xs font-mono">{log.path}</TableCell>
-                            <TableCell>
-                              <Badge variant={log.status === 200 ? "default" : "destructive"}>{log.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-xs max-w-xs truncate">{log.response}</TableCell>
+                {showLogs && pingLogs.length > 0 && (
+                  <div className="mt-6 space-y-2">
+                    <Label className="text-base font-medium">Request Log</Label>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Time</TableHead>
+                            <TableHead>Method</TableHead>
+                            <TableHead>Path</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Response</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {pingLogs.slice(0, 5).map((log, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="text-xs">{log.date.toLocaleTimeString()}</TableCell>
+                              <TableCell className="text-xs font-mono">{log.method}</TableCell>
+                              <TableCell className="text-xs font-mono">{log.path}</TableCell>
+                              <TableCell>
+                                <Badge variant={log.status === 200 ? "default" : "destructive"}>{log.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-xs max-w-xs truncate">{log.response}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       </main>
