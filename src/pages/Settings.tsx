@@ -20,9 +20,9 @@ interface PingLog {
 }
 
 const pricingPlans = [
-  { name: "Starter", price: "$25/mo", docs: 50, description: "For solo users and small teams" },
-  { name: "Business", price: "$60/mo", docs: 200, description: "Private KB per user for SMEs" },
-  { name: "Business+", price: "$150/mo", docs: 500, description: "Priority support & custom workflows" },
+  { name: "Starter", price: "$49/mo", pages: 2,500, description: "For solo users and small teams" },
+  { name: "Business", price: "$199/mo", pages: 25,000, description: "Private KB per user for SMEs" },
+  { name: "Business+", price: "$399/mo", pages: 100,000, description: "Priority support & custom workflows" },
 ];
 
 const Settings = () => {
