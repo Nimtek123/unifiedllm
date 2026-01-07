@@ -6,21 +6,21 @@ import { useNavigate } from "react-router-dom";
 const plans = [
   {
     name: "Starter",
-    docs: "500 docs",
+    docs: "2,500 pages",
     price: "$49",
     period: "/mo",
     description: "Solo or small teams",
-    features: ["Up to 500 documents", "Basic LLM queries", "Email support", "Standard processing"],
+    features: ["Up to 2,500 pages", "Basic LLM queries", "Email support", "Standard processing"],
     popular: false,
   },
   {
     name: "Business",
-    docs: "5000 docs",
+    docs: "25,000 pages",
     price: "$149",
     period: "/mo",
     description: "SMEs, private KB per user",
     features: [
-      "Up to 5000 documents",
+      "Up to 25,000 pages",
       "Priority LLM queries",
       "Private knowledge base",
       "Email support",
@@ -30,12 +30,12 @@ const plans = [
   },
   {
     name: "Business+",
-    docs: "25000 docs",
+    docs: "100,000 pages",
     price: "$399",
     period: "/mo",
     description: "Priority support + custom workflows",
     features: [
-      "Up to 25000 documents",
+      "Up to 100,000 pages",
       "Unlimited LLM queries",
       "Custom workflows",
       "Private knowledge base",
