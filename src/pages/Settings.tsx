@@ -269,7 +269,7 @@ const Settings = () => {
                     <div>
                       <h4 className="font-medium">{plan.name}</h4>
                       <p className="text-sm text-muted-foreground">{plan.description}</p>
-                      <p className="text-sm text-muted-foreground">{plan.docs} documents</p>
+                      <p className="text-sm text-muted-foreground">{plan.pages.toLocaleString()} pages</p>
                     </div>
                     <div className="text-right">
                       <p className="font-bold">{plan.price}</p>
