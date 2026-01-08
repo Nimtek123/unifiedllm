@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
-const PROJECT_ID = "6921fb6b001624e640e3";
+const PROJECT_ID = "695514d70000b996a41e";
 const DATABASE_ID = "692f6e880008c421e414";
 const USER_SETTINGS_COLLECTION = "user_settings";
 const TEAM_MEMBERS_COLLECTION = "team_members";
@@ -32,7 +32,7 @@ function buildQueryUrl(collectionId: string, attribute: string, value: string): 
   const query = JSON.stringify({
     method: "equal",
     attribute: attribute,
-    values: [value]
+    values: [value],
   });
   return `${APPWRITE_ENDPOINT}/databases/${DATABASE_ID}/collections/${collectionId}/documents?queries[]=${encodeURIComponent(query)}`;
 }
@@ -41,10 +41,10 @@ function buildQueryUrl(collectionId: string, attribute: string, value: string): 
 async function getParentUserId(userId: string): Promise<string | null> {
   try {
     console.log(`Checking if user ${userId} is a sub-user...`);
-    
+
     const queryUrl = buildQueryUrl(TEAM_MEMBERS_COLLECTION, "userId", userId);
     console.log(`Query URL: ${queryUrl}`);
-    
+
     const response = await fetch(queryUrl, {
       headers: {
         "Content-Type": "application/json",
@@ -61,13 +61,13 @@ async function getParentUserId(userId: string): Promise<string | null> {
 
     const data = await response.json();
     console.log(`team_members query returned ${data.documents?.length || 0} documents`);
-    
+
     if (data.documents && data.documents.length > 0) {
       const teamMember = data.documents[0] as TeamMember;
       console.log(`User ${userId} is a sub-user of parent ${teamMember.parentUserId}`);
       return teamMember.parentUserId;
     }
-    
+
     console.log(`User ${userId} is not a sub-user (no team_members record found)`);
     return null;
   } catch (error) {
@@ -80,10 +80,10 @@ async function getParentUserId(userId: string): Promise<string | null> {
 async function getUserSettings(userId: string): Promise<UserSettings | null> {
   try {
     console.log(`Fetching user settings for userId: ${userId}`);
-    
+
     const queryUrl = buildQueryUrl(USER_SETTINGS_COLLECTION, "userId", userId);
     console.log(`Query URL: ${queryUrl}`);
-    
+
     const response = await fetch(queryUrl, {
       headers: {
         "Content-Type": "application/json",
@@ -100,17 +100,19 @@ async function getUserSettings(userId: string): Promise<UserSettings | null> {
 
     const data = await response.json();
     console.log(`user_settings query returned ${data.documents?.length || 0} documents`);
-    
+
     if (data.documents && data.documents.length > 0) {
       const settings = data.documents[0];
-      console.log(`Found settings with datasetId: ${settings.datasetId ? 'yes' : 'no'}, apiKey: ${settings.apiKey ? 'yes' : 'no'}`);
+      console.log(
+        `Found settings with datasetId: ${settings.datasetId ? "yes" : "no"}, apiKey: ${settings.apiKey ? "yes" : "no"}`,
+      );
       return {
         datasetId: settings.datasetId,
         apiKey: settings.apiKey,
         maxDocuments: settings.maxDocuments || 5,
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error fetching user settings:", error);
@@ -122,13 +124,13 @@ async function getUserSettings(userId: string): Promise<UserSettings | null> {
 async function getCredentials(userId: string): Promise<UserSettings | null> {
   // First, check if this user is a sub-user
   const parentUserId = await getParentUserId(userId);
-  
+
   if (parentUserId) {
     // User is a sub-user, fetch parent's credentials
     console.log(`Fetching credentials from parent user: ${parentUserId}`);
     return getUserSettings(parentUserId);
   }
-  
+
   // User is not a sub-user, fetch their own credentials
   console.log(`User is not a sub-user, fetching own credentials for: ${userId}`);
   return getUserSettings(userId);
@@ -137,10 +139,10 @@ async function getCredentials(userId: string): Promise<UserSettings | null> {
 // List documents from Dify
 async function listDocuments(datasetId: string, apiKey: string) {
   console.log(`Listing documents for dataset: ${datasetId}`);
-  
+
   const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/documents?page=1&limit=100`, {
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
   });
@@ -157,11 +159,11 @@ async function listDocuments(datasetId: string, apiKey: string) {
 // Delete document from Dify
 async function deleteDocument(datasetId: string, apiKey: string, documentId: string) {
   console.log(`Deleting document ${documentId} from dataset: ${datasetId}`);
-  
+
   const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/documents/${documentId}`, {
     method: "DELETE",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
   });
@@ -178,26 +180,29 @@ async function deleteDocument(datasetId: string, apiKey: string, documentId: str
 // Upload documents to Dify
 async function uploadDocuments(datasetId: string, apiKey: string, formData: FormData) {
   console.log(`Uploading documents to dataset: ${datasetId}`);
-  
+
   // Get the files from formData and create a new FormData for Dify
   const difyFormData = new FormData();
-  
+
   const files = formData.getAll("files");
   for (const file of files) {
     if (file instanceof File) {
       difyFormData.append("file", file);
     }
   }
-  
+
   difyFormData.append("indexing_technique", "high_quality");
-  difyFormData.append("process_rule", JSON.stringify({
-    mode: "automatic"
-  }));
+  difyFormData.append(
+    "process_rule",
+    JSON.stringify({
+      mode: "automatic",
+    }),
+  );
 
   const response = await fetch(`${DIFY_API_URL}/datasets/${datasetId}/document/create_by_file`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: difyFormData,
   });
@@ -239,20 +244,22 @@ serve(async (req) => {
     console.log(`Processing action: ${action} for user: ${userId}`);
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "User ID is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "User ID is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get credentials (checks for sub-user and uses parent's credentials if applicable)
     const userSettings = await getCredentials(userId);
-    
+
     if (!userSettings || !userSettings.datasetId || !userSettings.apiKey) {
       console.log("User API settings not found or incomplete");
       return new Response(
-        JSON.stringify({ error: "User API settings not configured. Please ask your administrator to configure API settings." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "User API settings not configured. Please ask your administrator to configure API settings.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -271,42 +278,41 @@ serve(async (req) => {
 
       case "deleteDocument":
         if (!documentId) {
-          return new Response(
-            JSON.stringify({ error: "Document ID is required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          return new Response(JSON.stringify({ error: "Document ID is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
         result = await deleteDocument(datasetId, apiKey, documentId);
         break;
 
       case "uploadDocuments":
         if (!formData) {
-          return new Response(
-            JSON.stringify({ error: "Form data with files is required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          return new Response(JSON.stringify({ error: "Form data with files is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
         result = await uploadDocuments(datasetId, apiKey, formData);
         break;
 
       default:
-        return new Response(
-          JSON.stringify({ error: "Invalid action" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Invalid action" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
     }
 
-    return new Response(
-      JSON.stringify(result),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: unknown) {
     console.error("Edge function error:", error);
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

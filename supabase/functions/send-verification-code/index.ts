@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
-const PROJECT_ID = "6921fb6b001624e640e3";
+const PROJECT_ID = "695514d70000b996a41e";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,35 +18,35 @@ serve(async (req) => {
     const { email } = await req.json();
 
     if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Email is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const APPWRITE_API_KEY = Deno.env.get("APPWRITE_API_KEY");
     const normalizedEmail = email.toLowerCase();
-    
+
     // Check if user already exists in Appwrite
     const usersResponse = await fetch(
-      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(JSON.stringify(["equal(\"email\", [\"" + normalizedEmail + "\"])"]))}`,
+      `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(JSON.stringify(['equal("email", ["' + normalizedEmail + '"])']))}`,
       {
         headers: {
           "Content-Type": "application/json",
           "X-Appwrite-Project": PROJECT_ID,
           "X-Appwrite-Key": APPWRITE_API_KEY!,
         },
-      }
+      },
     );
 
     const usersData = await usersResponse.json();
     console.log("Users check response:", usersData);
-    
+
     if (usersData.users && usersData.users.length > 0) {
-      return new Response(
-        JSON.stringify({ error: "An account with this email already exists. Please sign in." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "An account with this email already exists. Please sign in." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Generate random 6-digit code
@@ -62,21 +62,16 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Delete any existing codes for this email
-    await supabase
-      .from("password_reset_codes")
-      .delete()
-      .eq("email", normalizedEmail);
+    await supabase.from("password_reset_codes").delete().eq("email", normalizedEmail);
 
     // Insert new verification code with 15 minute expiry
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    const { error: insertError } = await supabase
-      .from("password_reset_codes")
-      .insert({
-        email: normalizedEmail,
-        security_code: verificationCode,
-        expires_at: expiresAt,
-        used: false,
-      });
+    const { error: insertError } = await supabase.from("password_reset_codes").insert({
+      email: normalizedEmail,
+      security_code: verificationCode,
+      expires_at: expiresAt,
+      used: false,
+    });
 
     if (insertError) {
       console.error("Error storing verification code:", insertError);
@@ -84,7 +79,7 @@ serve(async (req) => {
     }
 
     console.log(`Verification code for ${normalizedEmail}: ${verificationCode}`);
-    
+
     // Send email via Resend
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (RESEND_API_KEY) {
@@ -92,7 +87,7 @@ serve(async (req) => {
         const emailResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            Authorization: `Bearer ${RESEND_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -113,7 +108,7 @@ serve(async (req) => {
             `,
           }),
         });
-        
+
         if (!emailResponse.ok) {
           console.error("Resend error:", await emailResponse.text());
         } else {
@@ -124,16 +119,15 @@ serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true, message: "Verification code sent to your email." }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({ success: true, message: "Verification code sent to your email." }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("Error in send-verification-code:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

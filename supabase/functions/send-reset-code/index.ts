@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
-const PROJECT_ID = "6921fb6b001624e640e3";
+const PROJECT_ID = "695514d70000b996a41e";
 const DATABASE_ID = "692f6e880008c421e414";
 const COLLECTION_USER_ACCOUNTS = "user_accounts";
 
@@ -20,15 +20,15 @@ serve(async (req) => {
     const { email } = await req.json();
 
     if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Email is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const APPWRITE_API_KEY = Deno.env.get("APPWRITE_API_KEY");
     const normalizedEmail = email.toLowerCase();
-    
+
     // First verify the email exists in Appwrite users
     const usersResponse = await fetch(
       `${APPWRITE_ENDPOINT}/users?queries[]=${encodeURIComponent(`equal("email", ["${normalizedEmail}"])`)}`,
@@ -38,16 +38,16 @@ serve(async (req) => {
           "X-Appwrite-Project": PROJECT_ID,
           "X-Appwrite-Key": APPWRITE_API_KEY!,
         },
-      }
+      },
     );
 
     const usersData = await usersResponse.json();
-    
+
     if (!usersData.users || usersData.users.length === 0) {
       // Don't reveal if email exists or not for security
       return new Response(
         JSON.stringify({ success: true, message: "If this email exists, a reset code has been sent." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -67,7 +67,7 @@ serve(async (req) => {
           "X-Appwrite-Project": PROJECT_ID,
           "X-Appwrite-Key": APPWRITE_API_KEY!,
         },
-      }
+      },
     );
 
     const existingDocs = await existingDocsResponse.json();
@@ -88,7 +88,7 @@ serve(async (req) => {
           body: JSON.stringify({
             data: { security_code: securityCode },
           }),
-        }
+        },
       );
 
       if (!updateResponse.ok) {
@@ -114,7 +114,7 @@ serve(async (req) => {
               security_code: securityCode,
             },
           }),
-        }
+        },
       );
 
       if (!createResponse.ok) {
@@ -125,7 +125,7 @@ serve(async (req) => {
     }
 
     console.log(`Password reset code for ${normalizedEmail}: ${securityCode}`);
-    
+
     // Send email via Resend
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (RESEND_API_KEY) {
@@ -133,7 +133,7 @@ serve(async (req) => {
         const emailResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            Authorization: `Bearer ${RESEND_API_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -154,7 +154,7 @@ serve(async (req) => {
             `,
           }),
         });
-        
+
         if (!emailResponse.ok) {
           console.error("Resend error:", await emailResponse.text());
         } else {
@@ -167,14 +167,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, message: "If this email exists, a reset code has been sent." }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-
   } catch (error: any) {
     console.error("Error in send-reset-code:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
