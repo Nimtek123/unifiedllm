@@ -9,7 +9,7 @@ const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
 const PROJECT_ID = "695514d70000b996a41e";
 const DATABASE_ID = "692f6e880008c421e414";
 const USER_SETTINGS_COLLECTION = "user_settings";
-const TEAM_MEMBERS_COLLECTION = "team_members";
+const TEAM_MEMBERS_COLLECTION = "team_membersx";
 const APPWRITE_API_KEY =
   "standard_b21d55c9c77abc712095488fa957328c5a8d19dda991e27bdf14285d2409e943f654d4d660fa041480c4a262640d647ecb5cc1f1f4fd42c9ca77304dfc348312ba15f6dd014eff439e13ac25c111ab1f54c51dec22370e685b43a0ecc7e3cf11a2691004963d3a7ac8a63df4dc8cdb6f61bd41a7d2e8db79bb8197a944cbce2e";
 const DIFY_API_URL = "https://dify.unified-bi.org/v1";
