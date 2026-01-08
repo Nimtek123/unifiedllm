@@ -2,7 +2,7 @@ import { Client, Databases, Account, Storage, ID, Query, Functions } from "appwr
 
 const client = new Client();
 
-client.setEndpoint("https://appwrite.unified-bi.org/v1").setProject("6921fb6b001624e640e3");
+client.setEndpoint("https://appwrite.unified-bi.org/v1").setProject("695514d70000b996a41e");
 
 // For cross-domain cookies
 if (typeof window !== "undefined") {
@@ -22,10 +22,10 @@ export const COLLECTIONS = {
 
 // API Key for server-side operations (used when session cookies don't work)
 const API_KEY =
-  "standard_53669402f9a8017a6e177717a6dabac39f9551daea2929a2701b2afadac7cd530fb0a9ec21143a435fd0bd6dbcaa20f2715c3225084855828f001ae5a68080500d77350bb8c46cc874c918ee2f18d888569259b6ada96085599512131dccb2fdeccf1d1b35aa6c8dc55bfdbc5c3899d0b82f76c4c333a1b0121629d103c2cf4c";
+  "standard_b21d55c9c77abc712095488fa957328c5a8d19dda991e27bdf14285d2409e943f654d4d660fa041480c4a262640d647ecb5cc1f1f4fd42c9ca77304dfc348312ba15f6dd014eff439e13ac25c111ab1f54c51dec22370e685b43a0ecc7e3cf11a2691004963d3a7ac8a63df4dc8cdb6f61bd41a7d2e8db79bb8197a944cbce2e";
 
 const APPWRITE_ENDPOINT = "https://appwrite.unified-bi.org/v1";
-const PROJECT_ID = "6921fb6b001624e640e3";
+const PROJECT_ID = "695514d70000b996a41e";
 
 // Helper function to make authenticated API requests
 export const appwriteFetch = async (path: string, options: RequestInit = {}) => {

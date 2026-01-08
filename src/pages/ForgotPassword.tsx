@@ -28,7 +28,7 @@ const ForgotPassword = () => {
     try {
       // Call an Appwrite function to handle everything
       const execution = await functions.createExecution(
-        "693ca01700141790a74b", // Your function ID
+        "695ff85d00147af18a41", // Your function ID
         JSON.stringify({
           email: email,
           action: "send_reset_code", // Specify action
@@ -62,7 +62,7 @@ const ForgotPassword = () => {
 
     try {
       // Call the edge function
-      const execution = await functions.createExecution("693cc640003623bac07b", JSON.stringify({ email, code }));
+      const execution = await functions.createExecution("695ff9ae0003103be5c1", JSON.stringify({ email, code }));
 
       const response = JSON.parse(execution.responseBody);
 
@@ -96,7 +96,7 @@ const ForgotPassword = () => {
     try {
       // Call Appwrite backend function to update the password
       const execution = await functions.createExecution(
-        "693d56a20016fd154bfe",
+        "695ff9e6001847c2e588",
         JSON.stringify({
           email,
           newPassword,
