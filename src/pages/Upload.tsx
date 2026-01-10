@@ -171,7 +171,7 @@ const Upload = () => {
     try {
       for (const file of selectedFiles) {
         // 1️⃣ Upload to your server
-        const documentUrl = await uploadToServer(file);
+        const documentUrl = await uploadToServer(file, userSettings.datasetId);
 
         // 2️⃣ Upload to Dify
         const formData = new FormData();
