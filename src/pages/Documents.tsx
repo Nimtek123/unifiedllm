@@ -134,8 +134,14 @@ const Documents = () => {
     setDeletingId(doc.id);
 
     try {
-      // 1️⃣ Document name
-      const filename = doc.name;
+      // 1️⃣ Find document_url metadata
+      const documentUrlMeta = doc.doc_metadata?.find((m) => m.name === "document_url");
+
+      if (!documentUrlMeta) {
+        throw new Error("Document URL not found");
+      }
+
+      const filename = getFilenameFromUrl(documentUrlMeta.value);
 
       // 2️⃣ Delete file from file server
       const fileDeleteRes = await fetch(
@@ -176,6 +182,10 @@ const Documents = () => {
       setDeletingId(null);
     }
   };
+
+  function getFilenameFromUrl(url: string) {
+    return url.split("/").pop();
+  }
 
   const clearFilters = () => setSearchQuery("");
 
