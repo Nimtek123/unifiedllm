@@ -134,14 +134,8 @@ const Documents = () => {
     setDeletingId(doc.id);
 
     try {
-      // 1️⃣ Find document_url metadata
-      const documentUrlMeta = doc.metadata?.find((m) => m.name === "document_url");
-
-      if (!documentUrlMeta) {
-        throw new Error("Document URL not found");
-      }
-
-      const filename = getFilenameFromUrl(documentUrlMeta.value);
+      // 1️⃣ Document name
+      const filename = doc.name;
 
       // 2️⃣ Delete file from file server
       const fileDeleteRes = await fetch(
