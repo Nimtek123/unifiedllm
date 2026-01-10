@@ -237,8 +237,7 @@ const Upload = () => {
     const res = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents/metadata`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${userSettings.apiKey}`,
       },
       body: JSON.stringify({
         operation_data: [
@@ -246,6 +245,7 @@ const Upload = () => {
             document_id: documentId,
             metadata_list: [
               {
+                id: "675a0bc9-b35b-4114-8a30-a8ffd2413b2f",
                 name: "document_url",
                 value: documentUrl,
               },
