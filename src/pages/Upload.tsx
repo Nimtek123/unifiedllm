@@ -221,9 +221,8 @@ const Upload = () => {
   async function uploadToServer(file: File, datasetId: string): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("datasetId", datasetId);
 
-    const res = await fetch("https://ftp.unified-bi.org/upload", {
+    const res = await fetch(`https://ftp.unified-bi.org/upload?datasetId=${encodeURIComponent(datasetId)}`, {
       method: "POST",
       body: formData,
     });
