@@ -165,23 +165,15 @@ const Upload = () => {
       return;
     }
 
-    // Check document limit
-    const totalAfterUpload = documents.length + selectedFiles.length;
-    if (totalAfterUpload > maxDocuments) {
-      const remaining = maxDocuments - documents.length;
-      toast.error(
-        `Document limit exceeded! You can upload ${remaining > 0 ? remaining : 0} more file(s). ` +
-          `Current: ${documents.length}/${maxDocuments}. Please upgrade your account for more uploads.`,
-      );
-      return;
-    }
-
     setIsUploading(true);
-    setUploadProgress(0);
     let successCount = 0;
 
     try {
       for (const file of selectedFiles) {
+        // 1️⃣ Upload to your server
+        const documentUrl = await uploadToServer(file);
+
+        // 2️⃣ Upload to Dify
         const formData = new FormData();
         formData.append("file", file);
         formData.append(
@@ -196,32 +188,79 @@ const Upload = () => {
           `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/document/create_by_file`,
           {
             method: "POST",
-            headers: { Authorization: `Bearer ${userSettings.apiKey}` },
+            headers: {
+              Authorization: `Bearer ${userSettings.apiKey}`,
+            },
             body: formData,
           },
         );
 
-        if (response.ok) {
-          successCount++;
-        }
+        if (!response.ok) throw new Error("Dify upload failed");
+
+        const difyData = await response.json();
+        const documentId = difyData.document.id;
+
+        // 3️⃣ Attach metadata
+        await attachDocumentMetadata(userSettings.datasetId, userSettings.apiKey, documentId, documentUrl);
+
+        successCount++;
         setUploadProgress(Math.round((successCount / selectedFiles.length) * 100));
       }
 
-      if (successCount > 0) {
-        toast.success(`Success! ${successCount} of ${selectedFiles.length} files uploaded.`);
-        await loadDocuments(userSettings.datasetId, userSettings.apiKey);
-        setSelectedFiles([]);
-      } else {
-        toast.error("No files were uploaded successfully");
-      }
+      toast.success(`${successCount} document(s) uploaded successfully`);
+      await loadDocuments(userSettings.datasetId, userSettings.apiKey);
+      setSelectedFiles([]);
     } catch (err: any) {
-      console.error("Upload error:", err);
-      toast.error(`Upload failed: ${err.message}`);
+      console.error(err);
+      toast.error(err.message);
     } finally {
       setIsUploading(false);
-      setTimeout(() => setUploadProgress(0), 3000);
     }
   };
+
+  async function uploadToServer(file: File, datasetId: string): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("datasetId", datasetId);
+
+    const res = await fetch("https://api.unified-bi.org/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) throw new Error("Server upload failed");
+
+    const data = await res.json();
+    return data.url;
+  }
+
+  async function attachDocumentMetadata(datasetId: string, apiKey: string, documentId: string, documentUrl: string) {
+    const res = await fetch(`https://dify.unified-bi.org/v1/datasets/${datasetId}/documents/metadata`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        operation_data: [
+          {
+            document_id: documentId,
+            metadata_list: [
+              {
+                name: "document_url",
+                value: documentUrl,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Metadata update failed: ${err}`);
+    }
+  }
 
   const remainingUploads = maxDocuments - documents.length;
   const canUpload = remainingUploads > 0;
