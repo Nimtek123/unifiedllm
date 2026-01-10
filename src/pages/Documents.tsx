@@ -134,24 +134,50 @@ const Documents = () => {
     setDeletingId(doc.id);
 
     try {
+      // 1️⃣ Find document_url metadata
+      const documentUrlMeta = doc.metadata?.find((m) => m.name === "document_url");
+
+      if (!documentUrlMeta) {
+        throw new Error("Document URL not found");
+      }
+
+      const filename = getFilenameFromUrl(documentUrlMeta.value);
+
+      // 2️⃣ Delete file from file server
+      const fileDeleteRes = await fetch(
+        `https://ftp.unified-bi.org/file?datasetId=${userSettings.datasetId}&filename=${filename}`,
+        {
+          method: "DELETE",
+          // headers: {
+          //   "x-api-key": FILE_API_KEY, // optional
+          // },
+        },
+      );
+
+      if (!fileDeleteRes.ok) {
+        throw new Error("Failed to delete file from server");
+      }
+
+      // 3️⃣ Delete from Dify
       const response = await fetch(
         `https://dify.unified-bi.org/v1/datasets/${userSettings.datasetId}/documents/${doc.id}`,
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${userSettings.apiKey}` },
+          headers: {
+            Authorization: `Bearer ${userSettings.apiKey}`,
+          },
         },
       );
 
-      if (response.ok) {
-        toast.success("Document deleted successfully");
-        setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-      } else {
-        const error = await response.json();
-        toast.error(`Failed to delete: ${error.message || "Unknown error"}`);
+      if (!response.ok) {
+        throw new Error("Failed to delete document from Dify");
       }
+
+      toast.success("Document deleted successfully");
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     } catch (error: any) {
-      console.error("Error deleting document:", error);
-      toast.error("Failed to delete document");
+      console.error("Delete error:", error);
+      toast.error(error.message || "Failed to delete document");
     } finally {
       setDeletingId(null);
     }
