@@ -223,7 +223,7 @@ const Upload = () => {
     formData.append("file", file);
     formData.append("datasetId", datasetId);
 
-    const res = await fetch("https://api.unified-bi.org/upload", {
+    const res = await fetch("https://ftp.unified-bi.org/upload", {
       method: "POST",
       body: formData,
     });
