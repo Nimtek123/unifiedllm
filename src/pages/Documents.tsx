@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Trash2, FileText, ChevronLeft, ChevronRight, Search, X, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, FileText, ChevronLeft, ChevronRight, Search, X, AlertCircle, Database } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
 import {
@@ -29,6 +30,13 @@ interface DifyDocument {
   word_count: number | null;
   created_at: number;
   enabled: boolean;
+  doc_metadata?: { id: string; name: string; value: string }[];
+}
+
+interface DatasetItem {
+  $id: string;
+  datasetId: string;
+  name?: string;
 }
 
 const Documents = () => {
@@ -46,6 +54,8 @@ const Documents = () => {
     can_manage_users: false,
   });
   const [subUser, setSubUser] = useState(false);
+  const [datasetList, setDatasetList] = useState<DatasetItem[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<string>("");
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -94,21 +104,41 @@ const Documents = () => {
         });
       }
 
-      // Load settings for the effective user
+      // Load all datasets for the effective user
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
         Query.equal("userId", effectiveUserId),
       ]);
 
-      const settings = response.documents[0];
-      if (settings?.datasetId && settings?.apiKey) {
-        setUserSettings(settings);
-        await loadDocuments(settings.datasetId, settings.apiKey);
+      const datasets = response.documents.map((doc: any) => ({
+        $id: doc.$id,
+        datasetId: doc.datasetId,
+        name: doc.name || doc.datasetId,
+        apiKey: doc.apiKey,
+      }));
+
+      setDatasetList(datasets);
+
+      if (datasets.length > 0) {
+        const firstDataset = datasets[0];
+        setSelectedDataset(firstDataset.datasetId);
+        setUserSettings(firstDataset);
+        await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
       } else {
         setIsLoading(false);
       }
     } catch (error) {
       console.error("Error loading settings:", error);
       setIsLoading(false);
+    }
+  };
+
+  const handleDatasetChange = async (datasetId: string) => {
+    setSelectedDataset(datasetId);
+    const dataset = datasetList.find((d: any) => d.datasetId === datasetId);
+    if (dataset) {
+      setUserSettings(dataset);
+      setIsLoading(true);
+      await loadDocuments(dataset.datasetId, (dataset as any).apiKey);
     }
   };
 
@@ -218,9 +248,29 @@ const Documents = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 animate-slide-up">
-          <h2 className="text-3xl font-bold mb-2">Document Management</h2>
-          <p className="text-muted-foreground">View and manage your uploaded documents</p>
+        <div className="mb-6 animate-slide-up flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Document Management</h2>
+            <p className="text-muted-foreground">View and manage your uploaded documents</p>
+          </div>
+          {datasetList.length > 1 && (
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Dataset:</span>
+              <Select value={selectedDataset} onValueChange={handleDatasetChange}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Dataset" />
+                </SelectTrigger>
+                <SelectContent>
+                  {datasetList.map((dataset: any) => (
+                    <SelectItem key={dataset.$id} value={dataset.datasetId}>
+                      {dataset.name || dataset.datasetId}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
@@ -312,24 +362,22 @@ const Documents = () => {
                             <TableCell>{doc.word_count || "—"}</TableCell>
                             <TableCell>{formatDate(doc.created_at)}</TableCell>
                             <TableCell className="text-right">
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  {userPermissions.can_delete ||
-                                    (!subUser && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive"
-                                        disabled={deletingId === doc.id}
-                                      >
-                                        {deletingId === doc.id ? (
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="w-4 h-4" />
-                                        )}
-                                      </Button>
-                                    ))}
-                                </AlertDialogTrigger>
+                              {(userPermissions.can_delete || !subUser) && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                      disabled={deletingId === doc.id}
+                                    >
+                                      {deletingId === doc.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Document</AlertDialogTitle>
@@ -347,7 +395,8 @@ const Documents = () => {
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
-                              </AlertDialog>
+                                </AlertDialog>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}

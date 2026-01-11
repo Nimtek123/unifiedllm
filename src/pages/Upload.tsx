@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, Upload as UploadIcon, File, Loader2, AlertCircle, X, Database } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,8 @@ const Upload = () => {
     can_manage_users: false,
   });
   const [subUser, setSubUser] = useState(false);
+  const [datasetList, setDatasetList] = useState<any[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<string>("");
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -60,24 +62,44 @@ const Upload = () => {
         });
       }
 
-      // Load settings for the effective user
+      // Load all datasets for the effective user
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
         Query.equal("userId", effectiveUserId),
       ]);
 
-      const settings = response.documents.find((doc: any) => doc.userId === effectiveUserId);
+      const datasets = response.documents.map((doc: any) => ({
+        $id: doc.$id,
+        datasetId: doc.datasetId,
+        name: doc.name || doc.datasetId,
+        apiKey: doc.apiKey,
+        maxDocuments: doc.maxDocuments || 5,
+      }));
 
-      if (settings?.datasetId && settings?.apiKey) {
-        setUserSettings(settings);
-        setMaxDocuments(settings.maxDocuments || 5);
+      setDatasetList(datasets);
 
-        await loadDocuments(settings.datasetId, settings.apiKey);
+      if (datasets.length > 0) {
+        const firstDataset = datasets[0];
+        setSelectedDataset(firstDataset.datasetId);
+        setUserSettings(firstDataset);
+        setMaxDocuments(firstDataset.maxDocuments || 5);
+        await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
       } else {
         setIsLoading(false);
       }
     } catch (error) {
       console.error("Error loading settings:", error);
       setIsLoading(false);
+    }
+  };
+
+  const handleDatasetChange = async (datasetId: string) => {
+    setSelectedDataset(datasetId);
+    const dataset = datasetList.find((d: any) => d.datasetId === datasetId);
+    if (dataset) {
+      setUserSettings(dataset);
+      setMaxDocuments(dataset.maxDocuments || 5);
+      setIsLoading(true);
+      await loadDocuments(dataset.datasetId, dataset.apiKey);
     }
   };
 
@@ -291,15 +313,35 @@ const Upload = () => {
               <h2 className="text-3xl font-bold mb-2">Upload Documents</h2>
               <p className="text-muted-foreground">Add files to your private knowledge base</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={canUpload ? "default" : "destructive"}>
-                {documents.length} / {maxDocuments} documents
-              </Badge>
-              {!canUpload && (
-                <Button variant="outline" size="sm" onClick={() => navigate("/settings")}>
-                  Upgrade Account
-                </Button>
+            <div className="flex items-center gap-4 flex-wrap">
+              {datasetList.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Dataset:</span>
+                  <Select value={selectedDataset} onValueChange={handleDatasetChange}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select Dataset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {datasetList.map((dataset: any) => (
+                        <SelectItem key={dataset.$id} value={dataset.datasetId}>
+                          {dataset.name || dataset.datasetId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
+              <div className="flex items-center gap-2">
+                <Badge variant={canUpload ? "default" : "destructive"}>
+                  {documents.length} / {maxDocuments} documents
+                </Badge>
+                {!canUpload && (
+                  <Button variant="outline" size="sm" onClick={() => navigate("/settings")}>
+                    Upgrade Account
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

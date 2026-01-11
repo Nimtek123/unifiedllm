@@ -64,6 +64,11 @@ const Chat = () => {
     }
   };
 
+  // Handle LLM change - reload iframe with new LLM
+  const handleLlmChange = (llmId: string) => {
+    setSelectedLlm(llmId);
+  };
+
   const loadUserSettings = async (currentUserId: string) => {
     try {
       let effectiveUserId = currentUserId;
@@ -212,7 +217,7 @@ const Chat = () => {
               {llmList.length > 1 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Select LLM:</span>
-                  <Select value={selectedLlm} onValueChange={setSelectedLlm}>
+                  <Select value={selectedLlm} onValueChange={handleLlmChange}>
                     <SelectTrigger className="w-[200px]">
                       <SelectValue placeholder="Select LLM" />
                     </SelectTrigger>
