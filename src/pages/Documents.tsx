@@ -126,7 +126,9 @@ const Documents = () => {
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
       }));
-      const datasets = await difyApi.listDatasets();
+      const datasetsNew = await difyApi.listDatasets();
+
+      console.log(datasetsNew);
       setDatasetList(datasets);
 
       if (datasets.length > 0) {
