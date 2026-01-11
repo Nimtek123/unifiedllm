@@ -408,7 +408,7 @@ const SubUserManagement = () => {
                     Delete Documents
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  {/* <div className="flex items-center gap-2">
                     <Checkbox
                       checked={newUser.permissions.can_manage_users}
                       onCheckedChange={(checked) =>
@@ -419,7 +419,7 @@ const SubUserManagement = () => {
                       }
                     />
                     Manage Users
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -509,7 +509,7 @@ const SubUserManagement = () => {
                     {user.can_view && <Badge className="mr-1">View</Badge>}
                     {user.can_upload && <Badge className="mr-1">Upload</Badge>}
                     {user.can_delete && <Badge className="mr-1">Delete</Badge>}
-                    {user.can_manage_users && <Badge className="mr-1">Manage Users</Badge>}
+                    /* {user.can_manage_users && <Badge className="mr-1">Manage Users</Badge>} */
                   </TableCell>
 
                   <TableCell>
