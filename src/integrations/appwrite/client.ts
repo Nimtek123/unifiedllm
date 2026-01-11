@@ -40,12 +40,25 @@ export const appwriteFetch = async (path: string, options: RequestInit = {}) => 
     },
   });
 
+  // ❌ Handle errors safely (error body may or may not be JSON)
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Appwrite request failed");
+    const text = await response.text();
+    try {
+      const json = JSON.parse(text);
+      throw new Error(json.message || "Appwrite request failed");
+    } catch {
+      throw new Error(text || "Appwrite request failed");
+    }
   }
 
-  return response.json();
+  // ✅ DELETE / 204 No Content
+  if (response.status === 204) {
+    return null;
+  }
+
+  // ✅ Safely parse JSON only if body exists
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 };
 
 // Database helpers using API key
