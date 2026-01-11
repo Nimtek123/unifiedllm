@@ -407,19 +407,6 @@ const SubUserManagement = () => {
                     />
                     Delete Documents
                   </div>
-
-                  {/* <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={newUser.permissions.can_manage_users}
-                      onCheckedChange={(checked) =>
-                        setNewUser((u) => ({
-                          ...u,
-                          permissions: { ...u.permissions, can_manage_users: Boolean(checked) },
-                        }))
-                      }
-                    />
-                    Manage Users
-                  </div> */}
                 </div>
               </div>
 
