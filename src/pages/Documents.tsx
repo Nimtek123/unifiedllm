@@ -186,7 +186,7 @@ const Documents = () => {
 
       // 2️⃣ Delete file from file server
       const fileDeleteRes = await fetch(
-        `https://ftp.unified-bi.org/file?datasetId=${userSettings.datasetId}&filename=${filename}`,
+        `https://llmapi.unified-bi.org/file?datasetId=${userSettings.datasetId}&filename=${filename}`,
         {
           method: "DELETE",
           // headers: {
