@@ -405,7 +405,7 @@ const Dashboard = () => {
         </Card> */}
 
         {/* Team Management Section */}
-        {(!subUser || userPermissions?.can_manage_users) && (
+        {!subUser && (
           <div className="mt-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
             <SubUserManagement />
           </div>
