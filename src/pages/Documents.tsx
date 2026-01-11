@@ -125,57 +125,12 @@ const Documents = () => {
         datasetId: doc.datasetId,
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
-        source: "appwrite",
       }));
 
-      // Load datasets from difyApi - handle different response formats
-      let datasetsNew = [];
-      try {
-        const difyResponse = await difyApi.listDatasets();
+      setDatasetList(datasets);
 
-        // Handle different possible response formats
-        if (Array.isArray(difyResponse)) {
-          // If response is directly an array
-          datasetsNew = difyResponse.map((dataset: any) => ({
-            $id: dataset.id || dataset.datasetId || `dify-${dataset.name}`,
-            datasetId: dataset.datasetId || dataset.id || dataset.name,
-            name: dataset.name || dataset.datasetId || dataset.id,
-            apiKey: dataset.apiKey || "",
-            source: "dify",
-          }));
-        } else if (difyResponse && Array.isArray(difyResponse.data)) {
-          // If response has data property that's an array
-          datasetsNew = difyResponse.data.map((dataset: any) => ({
-            $id: dataset.id || dataset.datasetId || `dify-${dataset.name}`,
-            datasetId: dataset.datasetId || dataset.id || dataset.name,
-            name: dataset.name || dataset.datasetId || dataset.id,
-            apiKey: dataset.apiKey || "",
-            source: "dify",
-          }));
-        } else if (difyResponse && difyResponse.datasets && Array.isArray(difyResponse.datasets)) {
-          // If response has datasets property
-          datasetsNew = difyResponse.datasets.map((dataset: any) => ({
-            $id: dataset.id || dataset.datasetId || `dify-${dataset.name}`,
-            datasetId: dataset.datasetId || dataset.id || dataset.name,
-            name: dataset.name || dataset.datasetId || dataset.id,
-            apiKey: dataset.apiKey || "",
-            source: "dify",
-          }));
-        } else {
-          console.warn("Unexpected difyApi response format:", difyResponse);
-        }
-      } catch (difyError) {
-        console.warn("Error loading datasets from difyApi:", difyError);
-        // Continue with only appwrite datasets
-      }
-
-      // Merge datasets - prefer datasets from Appwrite (they have API keys)
-      const mergedDatasets = mergeDatasetsWithPriority(datasets, datasetsNew);
-
-      setDatasetList(mergedDatasets);
-
-      if (mergedDatasets.length > 0) {
-        const firstDataset = mergedDatasets[0];
+      if (datasets.length > 0) {
+        const firstDataset = datasets[0];
         setSelectedDataset(firstDataset.datasetId);
         setUserSettings(firstDataset);
         await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
@@ -186,29 +141,6 @@ const Documents = () => {
       console.error("Error loading settings:", error);
       setIsLoading(false);
     }
-  };
-
-  // Merge with priority (appwrite datasets first - they have API keys)
-  const mergeDatasetsWithPriority = (appwriteDatasets: any[], difyDatasets: any[]) => {
-    const datasetIds = new Set(appwriteDatasets.map((d) => d.datasetId));
-    const uniqueDifyDatasets = difyDatasets.filter((d) => !datasetIds.has(d.datasetId));
-    return [...appwriteDatasets, ...uniqueDifyDatasets];
-  };
-
-  // Alternative: Simple merge function without priority
-  const mergeDatasets = (datasets1: any[], datasets2: any[]) => {
-    const allDatasets = [...datasets1, ...datasets2];
-    const uniqueDatasets = [];
-    const seenIds = new Set();
-
-    for (const dataset of allDatasets) {
-      if (!seenIds.has(dataset.datasetId)) {
-        seenIds.add(dataset.datasetId);
-        uniqueDatasets.push(dataset);
-      }
-    }
-
-    return uniqueDatasets;
   };
 
   const handleDatasetChange = async (datasetId: string) => {
