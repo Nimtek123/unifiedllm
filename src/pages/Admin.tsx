@@ -211,6 +211,7 @@ const Admin = () => {
       await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.USER_SETTINGS, ID.unique(), {
         userId: newSettingsForm.userId,
         datasetId: newSettingsForm.datasetId,
+        name: newSettingsForm.name,
         apiKey: newSettingsForm.apiKey,
         accountType: newSettingsForm.accountType,
         maxDocuments: newSettingsForm.maxDocuments,
@@ -218,7 +219,7 @@ const Admin = () => {
       });
       toast.success("User settings created successfully");
       setShowCreateModal(false);
-      setNewSettingsForm({ userId: "", datasetId: "", apiKey: "", accountType: "free", maxDocuments: 5 });
+      setNewSettingsForm({ userId: "", datasetId: "", name: "", apiKey: "", accountType: "free", maxDocuments: 5 });
       await loadUserSettings();
     } catch (error: any) {
       toast.error(error.message || "Failed to create user settings");
