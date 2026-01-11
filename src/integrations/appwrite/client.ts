@@ -18,6 +18,7 @@ export const DATABASE_ID = "692f6e880008c421e414";
 export const COLLECTIONS = {
   USER_SETTINGS: "user_settings",
   LLM_LIST: "llm_list",
+  API_INTEGRATION: "api_integration",
 };
 
 // API Key for server-side operations (used when session cookies don't work)
