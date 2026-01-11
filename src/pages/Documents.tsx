@@ -145,7 +145,7 @@ const Documents = () => {
 
       // 2️⃣ Delete file from file server
       const fileDeleteRes = await fetch(
-        `https://llmapi.unified-bi.org/file?datasetId=${userSettings.datasetId}&filename=${filename}`,
+        `https://ftp.unified-bi.org/file?datasetId=${userSettings.datasetId}&filename=${filename}`,
         {
           method: "DELETE",
           // headers: {
@@ -314,7 +314,7 @@ const Documents = () => {
                             <TableCell className="text-right">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  {userPermissions.can_delete ||
+                                  {!userPermissions.can_delete ||
                                     (!subUser && (
                                       <Button
                                         variant="ghost"
