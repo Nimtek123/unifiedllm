@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface LLMItem {
   id: string;
   user_id: string;
-  llm_id: string;
+  llmId: string;
   llm_name: string;
 }
 
@@ -223,7 +223,7 @@ const Chat = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {llmList.map((llm) => (
-                        <SelectItem key={llm.id} value={llm.llm_id}>
+                        <SelectItem key={llm.id} value={llm.llmId}>
                           {llm.llm_name}
                         </SelectItem>
                       ))}
