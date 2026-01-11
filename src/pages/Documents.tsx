@@ -98,15 +98,19 @@ const Documents = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
+      setIsLoading(true);
+
       let effectiveUserId = userId;
 
-      // Check if logged-in user is a sub-user
+      // 1️⃣ Check sub-user
       const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
 
       if (teamRes.documents.length > 0) {
         const subUserDoc = teamRes.documents[0];
-        effectiveUserId = teamRes.documents[0].parentUserId;
+
+        effectiveUserId = subUserDoc.parentUserId;
         setSubUser(true);
+
         setUserPermissions({
           can_view: subUserDoc.can_view,
           can_upload: subUserDoc.can_upload,
@@ -115,26 +119,30 @@ const Documents = () => {
         });
       }
 
-      // Load all datasets for the effective user
+      // 2️⃣ Load user-linked datasets (Appwrite)
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
         Query.equal("userId", effectiveUserId),
       ]);
 
-      const datasets = response.documents.map((doc: any) => ({
+      const localDatasets = response.documents.map((doc: any) => ({
         $id: doc.$id,
         datasetId: doc.datasetId,
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
       }));
-      const datasetMap = new Map(datasets.map((d) => [d.datasetId, d]));
 
-      const datasetsNew = await difyApi.listDatasets();
+      const datasetMap = new Map(localDatasets.map((d) => [d.datasetId, d]));
 
-      const mergedDatasets = datasetsNew.map((dify: any) => {
+      // 3️⃣ Load all Dify datasets
+      const difyDatasets = await difyApi.listDatasets();
+
+      // 4️⃣ Merge
+      const mergedDatasets = difyDatasets.map((dify: any) => {
         const local = datasetMap.get(dify.id);
 
         return {
-          ...dify, // full dify dataset object
+          ...dify,
+          datasetId: dify.id, // 🔑 normalize ID
           $id: local?.$id ?? null,
           apiKey: local?.apiKey ?? null,
           localName: local?.name ?? dify.name,
@@ -144,14 +152,17 @@ const Documents = () => {
 
       setDatasetList(mergedDatasets);
 
-      if (mergedDatasets.length > 0) {
-        const firstDataset = mergedDatasets[0];
-        setSelectedDataset(firstDataset.datasetId);
-        setUserSettings(firstDataset);
-        await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
-      } else {
-        setIsLoading(false);
+      // 5️⃣ Auto-select FIRST LINKED dataset ONLY
+      const firstLinked = mergedDatasets.find((d) => d.isLinked);
+
+      if (firstLinked) {
+        setSelectedDataset(firstLinked.datasetId);
+        setUserSettings(firstLinked);
+
+        await loadDocuments(firstLinked.datasetId, firstLinked.apiKey!);
       }
+
+      setIsLoading(false);
     } catch (error) {
       console.error("Error loading settings:", error);
       setIsLoading(false);
