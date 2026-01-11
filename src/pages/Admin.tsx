@@ -4,7 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, ID, listAppwriteUsers, difyApi } from "@/integrations/appwrite/client";
+import {
+  account,
+  appwriteDb,
+  DATABASE_ID,
+  COLLECTIONS,
+  ID,
+  listAppwriteUsers,
+  difyApi,
+} from "@/integrations/appwrite/client";
 import { ArrowLeft, Users, Search, Trash2, Edit2, Save, X, UserPlus, Bot, Plus, Database } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,6 +63,7 @@ const Admin = () => {
   const [newSettingsForm, setNewSettingsForm] = useState({
     userId: "",
     datasetId: "",
+    name: "",
     apiKey: "",
     accountType: "free",
     maxDocuments: 5,
@@ -769,7 +778,14 @@ const Admin = () => {
                 <label className="text-sm font-medium">Dataset</label>
                 <Select
                   value={newSettingsForm.datasetId}
-                  onValueChange={(value) => setNewSettingsForm({ ...newSettingsForm, datasetId: value })}
+                  onValueChange={(value) => {
+                    const selectedDataset = difyDatasets.find((ds) => ds.id === value);
+                    setNewSettingsForm({
+                      ...newSettingsForm,
+                      datasetId: value,
+                      name: selectedDataset?.name || "",
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select dataset" />
