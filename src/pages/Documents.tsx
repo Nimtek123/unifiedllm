@@ -274,7 +274,7 @@ const Documents = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {datasetList.map((dataset: any) => (
-                    <SelectItem key={dataset.$name} value={dataset.datasetId}>
+                    <SelectItem key={dataset.$id} value={dataset.datasetId}>
                       {dataset.name}
                     </SelectItem>
                   ))}
