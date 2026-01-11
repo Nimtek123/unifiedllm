@@ -23,6 +23,7 @@ interface UserSettings {
   $id: string;
   userId: string;
   datasetId: string;
+  name?: string;
   apiKey: string;
   accountType: string | null;
   maxDocuments: number | null;

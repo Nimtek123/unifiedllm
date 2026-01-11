@@ -15,10 +15,15 @@ import {
   X,
   AlertCircle,
   Database,
+  Key,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query, difyApi } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query, ID } from "@/integrations/appwrite/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +53,15 @@ interface DatasetItem {
   $id: string;
   datasetId: string;
   name?: string;
+  apiKey?: string;
+}
+
+interface ApiIntegration {
+  $id: string;
+  userId: string;
+  datasetId: string;
+  api_key: string;
+  dify_api: string;
 }
 
 const Documents = () => {
@@ -67,6 +81,14 @@ const Documents = () => {
   const [subUser, setSubUser] = useState(false);
   const [datasetList, setDatasetList] = useState<DatasetItem[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [effectiveUserId, setEffectiveUserId] = useState<string>("");
+  
+  // API Integration state
+  const [apiIntegration, setApiIntegration] = useState<ApiIntegration | null>(null);
+  const [loadingApiKey, setLoadingApiKey] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => searchQuery === "" || doc.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -90,6 +112,7 @@ const Documents = () => {
   const checkAuthAndLoad = async () => {
     try {
       const user = await account.get();
+      setCurrentUserId(user.$id);
       await loadUserSettings(user.$id);
     } catch (error) {
       navigate("/auth");
@@ -98,14 +121,14 @@ const Documents = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      let effectiveUserId = userId;
+      let effectiveId = userId;
 
       // Check if logged-in user is a sub-user
       const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
 
       if (teamRes.documents.length > 0) {
         const subUserDoc = teamRes.documents[0];
-        effectiveUserId = teamRes.documents[0].parentUserId;
+        effectiveId = teamRes.documents[0].parentUserId;
         setSubUser(true);
         setUserPermissions({
           can_view: subUserDoc.can_view,
@@ -114,10 +137,12 @@ const Documents = () => {
           can_manage_users: subUserDoc.can_manage_users,
         });
       }
+      
+      setEffectiveUserId(effectiveId);
 
       // Load all datasets for the effective user
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
-        Query.equal("userId", effectiveUserId),
+        Query.equal("userId", effectiveId),
       ]);
 
       const datasets = response.documents.map((doc: any) => ({
@@ -133,7 +158,10 @@ const Documents = () => {
         const firstDataset = datasets[0];
         setSelectedDataset(firstDataset.datasetId);
         setUserSettings(firstDataset);
-        await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
+        await Promise.all([
+          loadDocuments(firstDataset.datasetId, firstDataset.apiKey),
+          loadApiIntegration(effectiveId, firstDataset.datasetId),
+        ]);
       } else {
         setIsLoading(false);
       }
@@ -143,13 +171,105 @@ const Documents = () => {
     }
   };
 
+  const loadApiIntegration = async (userId: string, datasetId: string) => {
+    try {
+      const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.API_INTEGRATION, [
+        Query.equal("userId", userId),
+        Query.equal("datasetId", datasetId),
+      ]);
+      if (response.documents.length > 0) {
+        setApiIntegration(response.documents[0] as unknown as ApiIntegration);
+      } else {
+        setApiIntegration(null);
+      }
+    } catch (error) {
+      console.error("Error loading API integration:", error);
+      setApiIntegration(null);
+    }
+  };
+
   const handleDatasetChange = async (datasetId: string) => {
     setSelectedDataset(datasetId);
+    setShowApiKey(false);
+    setApiIntegration(null);
     const dataset = datasetList.find((d: any) => d.datasetId === datasetId);
     if (dataset) {
       setUserSettings(dataset);
       setIsLoading(true);
-      await loadDocuments(dataset.datasetId, (dataset as any).apiKey);
+      await Promise.all([
+        loadDocuments(dataset.datasetId, (dataset as any).apiKey),
+        loadApiIntegration(effectiveUserId, datasetId),
+      ]);
+    }
+  };
+
+  const generateApiKey = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let key = 'api_';
+    for (let i = 0; i < 32; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return key;
+  };
+
+  const handleGenerateApiKey = async () => {
+    if (!userSettings || !effectiveUserId || !selectedDataset) return;
+    
+    setLoadingApiKey(true);
+    try {
+      const newApiKey = generateApiKey();
+      const difyApiKey = (userSettings as any).apiKey;
+      
+      await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.API_INTEGRATION, ID.unique(), {
+        userId: effectiveUserId,
+        datasetId: selectedDataset,
+        api_key: newApiKey,
+        dify_api: difyApiKey,
+      });
+      
+      setApiIntegration({
+        $id: '',
+        userId: effectiveUserId,
+        datasetId: selectedDataset,
+        api_key: newApiKey,
+        dify_api: difyApiKey,
+      });
+      
+      await loadApiIntegration(effectiveUserId, selectedDataset);
+      toast.success("API key generated successfully");
+    } catch (error: any) {
+      console.error("Error generating API key:", error);
+      toast.error(error.message || "Failed to generate API key");
+    } finally {
+      setLoadingApiKey(false);
+    }
+  };
+
+  const handleDeleteApiKey = async () => {
+    if (!apiIntegration) return;
+    
+    setLoadingApiKey(true);
+    try {
+      await appwriteDb.deleteDocument(DATABASE_ID, COLLECTIONS.API_INTEGRATION, apiIntegration.$id);
+      setApiIntegration(null);
+      setShowApiKey(false);
+      toast.success("API key deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting API key:", error);
+      toast.error(error.message || "Failed to delete API key");
+    } finally {
+      setLoadingApiKey(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopiedKey(false), 2000);
+    } catch (error) {
+      toast.error("Failed to copy");
     }
   };
 
@@ -283,6 +403,93 @@ const Documents = () => {
             </div>
           )}
         </div>
+
+        {/* API Integration Card */}
+        <Card className="mb-6 animate-slide-up" style={{ animationDelay: "0.05s" }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              API Integration
+            </CardTitle>
+            <CardDescription>Generate an API key to push documents to your knowledge base</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">API URL:</span>
+                <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
+                  https://llmapi.unified-bi.org//knowledge/push
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard("https://llmapi.unified-bi.org//knowledge/push")}
+                >
+                  {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              
+              {apiIntegration ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">API Key:</span>
+                    <code className="bg-muted px-2 py-1 rounded text-sm flex-1 font-mono">
+                      {showApiKey ? apiIntegration.api_key : "•".repeat(36)}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(apiIntegration.api_key)}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={loadingApiKey}>
+                        {loadingApiKey ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        Delete API Key
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete API Key</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this API key? Any integrations using this key will stop working.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteApiKey}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ) : (
+                <Button onClick={handleGenerateApiKey} disabled={loadingApiKey || !selectedDataset}>
+                  {loadingApiKey ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Key className="w-4 h-4 mr-2" />
+                  )}
+                  Generate API Key
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
           <CardHeader>
