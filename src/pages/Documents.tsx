@@ -98,19 +98,15 @@ const Documents = () => {
 
   const loadUserSettings = async (userId: string) => {
     try {
-      setIsLoading(true);
-
       let effectiveUserId = userId;
 
-      // 1️⃣ Check sub-user
+      // Check if logged-in user is a sub-user
       const teamRes = await appwriteDb.listDocuments(DATABASE_ID, "team_members", [Query.equal("userId", userId)]);
 
       if (teamRes.documents.length > 0) {
         const subUserDoc = teamRes.documents[0];
-
-        effectiveUserId = subUserDoc.parentUserId;
+        effectiveUserId = teamRes.documents[0].parentUserId;
         setSubUser(true);
-
         setUserPermissions({
           can_view: subUserDoc.can_view,
           can_upload: subUserDoc.can_upload,
@@ -119,50 +115,29 @@ const Documents = () => {
         });
       }
 
-      // 2️⃣ Load user-linked datasets (Appwrite)
+      // Load all datasets for the effective user
       const response = await appwriteDb.listDocuments(DATABASE_ID, COLLECTIONS.USER_SETTINGS, [
         Query.equal("userId", effectiveUserId),
       ]);
 
-      const localDatasets = response.documents.map((doc: any) => ({
+      const datasets = response.documents.map((doc: any) => ({
         $id: doc.$id,
         datasetId: doc.datasetId,
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
       }));
+      const datasetsNew = await difyApi.listDatasets();
 
-      const datasetMap = new Map(localDatasets.map((d) => [d.datasetId, d]));
+      setDatasetList(datasets);
 
-      // 3️⃣ Load all Dify datasets
-      const difyDatasets = await difyApi.listDatasets();
-
-      // 4️⃣ Merge
-      const mergedDatasets = difyDatasets.map((dify: any) => {
-        const local = datasetMap.get(dify.id);
-
-        return {
-          ...dify,
-          datasetId: dify.id, // 🔑 normalize ID
-          $id: local?.$id ?? null,
-          apiKey: local?.apiKey ?? null,
-          localName: local?.name ?? dify.name,
-          isLinked: Boolean(local),
-        };
-      });
-
-      setDatasetList(mergedDatasets);
-
-      // 5️⃣ Auto-select FIRST LINKED dataset ONLY
-      const firstLinked = mergedDatasets.find((d) => d.isLinked);
-
-      if (firstLinked) {
-        setSelectedDataset(firstLinked.datasetId);
-        setUserSettings(firstLinked);
-
-        await loadDocuments(firstLinked.datasetId, firstLinked.apiKey!);
+      if (datasets.length > 0) {
+        const firstDataset = datasets[0];
+        setSelectedDataset(firstDataset.datasetId);
+        setUserSettings(firstDataset);
+        await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
+      } else {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     } catch (error) {
       console.error("Error loading settings:", error);
       setIsLoading(false);
