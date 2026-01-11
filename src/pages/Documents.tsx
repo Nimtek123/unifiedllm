@@ -436,13 +436,13 @@ const Documents = () => {
                   </code>
                 </pre>
 
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => copyToClipboard("https://llmapi.unified-bi.org/knowledge/push")}
                 >
                   {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
+                </Button> */}
               </div>
 
               {apiIntegration ? (
