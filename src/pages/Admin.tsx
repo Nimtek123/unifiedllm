@@ -162,6 +162,7 @@ const Admin = () => {
     setEditingId(settings.$id);
     setEditForm({
       datasetId: settings.datasetId,
+      name: settings.name,
       apiKey: settings.apiKey,
       accountType: settings.accountType || "free",
       maxDocuments: settings.maxDocuments || 5,
@@ -458,7 +459,14 @@ const Admin = () => {
                               {editingId === settings.$id ? (
                                 <Select
                                   value={editForm.datasetId || ""}
-                                  onValueChange={(value) => setEditForm({ ...editForm, datasetId: value })}
+                                  onValueChange={(value) => {
+                                    const selectedDataset = difyDatasets.find((ds) => ds.id === value);
+                                    setEditForm({
+                                      ...editForm,
+                                      datasetId: value,
+                                      name: selectedDataset?.name || "",
+                                    });
+                                  }}
                                 >
                                   <SelectTrigger className="h-8 w-48">
                                     <SelectValue placeholder="Select dataset" />
