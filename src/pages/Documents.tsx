@@ -83,7 +83,7 @@ const Documents = () => {
   const [selectedDataset, setSelectedDataset] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [effectiveUserId, setEffectiveUserId] = useState<string>("");
-  
+
   // API Integration state
   const [apiIntegration, setApiIntegration] = useState<ApiIntegration | null>(null);
   const [loadingApiKey, setLoadingApiKey] = useState(false);
@@ -137,7 +137,7 @@ const Documents = () => {
           can_manage_users: subUserDoc.can_manage_users,
         });
       }
-      
+
       setEffectiveUserId(effectiveId);
 
       // Load all datasets for the effective user
@@ -204,8 +204,8 @@ const Documents = () => {
   };
 
   const generateApiKey = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let key = 'api_';
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let key = "api_";
     for (let i = 0; i < 32; i++) {
       key += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -214,27 +214,27 @@ const Documents = () => {
 
   const handleGenerateApiKey = async () => {
     if (!userSettings || !effectiveUserId || !selectedDataset) return;
-    
+
     setLoadingApiKey(true);
     try {
       const newApiKey = generateApiKey();
       const difyApiKey = (userSettings as any).apiKey;
-      
+
       await appwriteDb.createDocument(DATABASE_ID, COLLECTIONS.API_INTEGRATION, ID.unique(), {
         userId: effectiveUserId,
         datasetId: selectedDataset,
         api_key: newApiKey,
         dify_api: difyApiKey,
       });
-      
+
       setApiIntegration({
-        $id: '',
+        $id: "",
         userId: effectiveUserId,
         datasetId: selectedDataset,
         api_key: newApiKey,
         dify_api: difyApiKey,
       });
-      
+
       await loadApiIntegration(effectiveUserId, selectedDataset);
       toast.success("API key generated successfully");
     } catch (error: any) {
@@ -247,7 +247,7 @@ const Documents = () => {
 
   const handleDeleteApiKey = async () => {
     if (!apiIntegration) return;
-    
+
     setLoadingApiKey(true);
     try {
       await appwriteDb.deleteDocument(DATABASE_ID, COLLECTIONS.API_INTEGRATION, apiIntegration.$id);
@@ -418,15 +418,18 @@ const Documents = () => {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">API URL:</span>
                 <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
-                  https://llmapi.unified-bi.org/knowledge/push
-                  Authorization: Bearer USER_API_KEY
+                  https://llmapi.unified-bi.org/knowledge/push Authorization: Bearer USER_API_KEY
                 </code>
-                <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
-                  {
-                    "title": "HR Policy 2025",
-                    "content": "Full document text here...",
-                    "language": "English"
-                  }
+                <code className="bg-muted px-2 py-1 rounded text-sm flex-1 whitespace-pre">
+                  {JSON.stringify(
+                    {
+                      title: "HR Policy 2025",
+                      content: "Full document text here...",
+                      language: "English",
+                    },
+                    null,
+                    2,
+                  )}
                 </code>
                 <Button
                   variant="ghost"
@@ -436,7 +439,7 @@ const Documents = () => {
                   {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
-              
+
               {apiIntegration ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -444,25 +447,21 @@ const Documents = () => {
                     <code className="bg-muted px-2 py-1 rounded text-sm flex-1 font-mono">
                       {showApiKey ? apiIntegration.api_key : "•".repeat(36)}
                     </code>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setShowApiKey(!showApiKey)}>
                       {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(apiIntegration.api_key)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(apiIntegration.api_key)}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" disabled={loadingApiKey}>
-                        {loadingApiKey ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        {loadingApiKey ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
                         Delete API Key
                       </Button>
                     </AlertDialogTrigger>
@@ -470,7 +469,8 @@ const Documents = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete API Key</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete this API key? Any integrations using this key will stop working.
+                          Are you sure you want to delete this API key? Any integrations using this key will stop
+                          working.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -487,11 +487,7 @@ const Documents = () => {
                 </div>
               ) : (
                 <Button onClick={handleGenerateApiKey} disabled={loadingApiKey || !selectedDataset}>
-                  {loadingApiKey ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Key className="w-4 h-4 mr-2" />
-                  )}
+                  {loadingApiKey ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
                   Generate API Key
                 </Button>
               )}
