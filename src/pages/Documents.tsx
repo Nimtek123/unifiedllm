@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
+import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query, difyApi } from "@/integrations/appwrite/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,7 +126,7 @@ const Documents = () => {
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
       }));
-
+      const datasets = await difyApi.listDatasets();
       setDatasetList(datasets);
 
       if (datasets.length > 0) {
