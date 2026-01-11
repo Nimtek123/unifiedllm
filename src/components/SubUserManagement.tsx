@@ -496,7 +496,6 @@ const SubUserManagement = () => {
                     {user.can_view && <Badge className="mr-1">View</Badge>}
                     {user.can_upload && <Badge className="mr-1">Upload</Badge>}
                     {user.can_delete && <Badge className="mr-1">Delete</Badge>}
-                    /* {user.can_manage_users && <Badge className="mr-1">Manage Users</Badge>} */
                   </TableCell>
 
                   <TableCell>
