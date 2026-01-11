@@ -422,11 +422,8 @@ const Documents = () => {
                     https://llmapi.unified-bi.org/knowledge/push
                     {"\n"}
                     Authorization: Bearer USER_API_KEY
-                  </code>
-                </pre>
-
-                <pre className="bg-muted p-3 rounded text-sm overflow-x-auto mt-3">
-                  <code>
+                    {"\n"}
+                    {"\n"}
                     {JSON.stringify(
                       {
                         title: "HR Policy 2025",
