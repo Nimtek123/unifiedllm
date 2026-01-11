@@ -130,7 +130,7 @@ const Documents = () => {
 
       const datasetsNew = await difyApi.listDatasets();
 
-      const mergedDatasets = difyDatasets.map((dify: any) => {
+      const mergedDatasets = datasetsNew.map((dify: any) => {
         const local = datasetMap.get(dify.id);
 
         return {
