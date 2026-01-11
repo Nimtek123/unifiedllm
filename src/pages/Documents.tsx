@@ -418,7 +418,15 @@ const Documents = () => {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">API URL:</span>
                 <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
-                  https://llmapi.unified-bi.org//knowledge/push
+                  https://llmapi.unified-bi.org/knowledge/push
+                  Authorization: Bearer USER_API_KEY
+                </code>
+                <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
+                  {
+                    "title": "HR Policy 2025",
+                    "content": "Full document text here...",
+                    "language": "English"
+                  }
                 </code>
                 <Button
                   variant="ghost"
