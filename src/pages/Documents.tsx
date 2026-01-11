@@ -126,13 +126,26 @@ const Documents = () => {
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
       }));
+      const datasetMap = new Map(datasets.map((d) => [d.datasetId, d]));
+
       const datasetsNew = await difyApi.listDatasets();
 
-      console.log(datasetsNew);
-      setDatasetList(datasets);
+      const mergedDatasets = difyDatasets.map((dify: any) => {
+        const local = datasetMap.get(dify.id);
 
-      if (datasets.length > 0) {
-        const firstDataset = datasets[0];
+        return {
+          ...dify, // full dify dataset object
+          $id: local?.$id ?? null,
+          apiKey: local?.apiKey ?? null,
+          localName: local?.name ?? dify.name,
+          isLinked: Boolean(local),
+        };
+      });
+
+      setDatasetList(mergedDatasets);
+
+      if (mergedDatasets.length > 0) {
+        const firstDataset = mergedDatasets[0];
         setSelectedDataset(firstDataset.datasetId);
         setUserSettings(firstDataset);
         await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
