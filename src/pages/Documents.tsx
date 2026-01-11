@@ -4,7 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Trash2, FileText, ChevronLeft, ChevronRight, Search, X, AlertCircle, Database } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Trash2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  X,
+  AlertCircle,
+  Database,
+} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { account, appwriteDb, DATABASE_ID, COLLECTIONS, Query } from "@/integrations/appwrite/client";
@@ -264,7 +275,7 @@ const Documents = () => {
                 <SelectContent>
                   {datasetList.map((dataset: any) => (
                     <SelectItem key={dataset.$id} value={dataset.datasetId}>
-                      {dataset.name || dataset.datasetId}
+                      {dataset.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -378,23 +389,23 @@ const Documents = () => {
                                       )}
                                     </Button>
                                   </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Document</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete "{doc.name}"? This cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(doc)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete "{doc.name}"? This cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(doc)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
                                 </AlertDialog>
                               )}
                             </TableCell>
