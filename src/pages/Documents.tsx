@@ -125,13 +125,25 @@ const Documents = () => {
         datasetId: doc.datasetId,
         name: doc.name || doc.datasetId,
         apiKey: doc.apiKey,
+        source: "appwrite", // Add source identifier
       }));
-      const datasetsNew = await difyApi.listDatasets();
 
-      setDatasetList(datasets);
+      const difyResponse = await difyApi.listDatasets();
+      const datasetsNew = difyResponse.map((dataset: any) => ({
+        $id: dataset.id || dataset.datasetId,
+        datasetId: dataset.datasetId || dataset.id,
+        name: dataset.name || dataset.datasetId,
+        apiKey: "", // Dify API might not return API keys
+        source: "dify", // Add source identifier
+      }));
 
-      if (datasets.length > 0) {
-        const firstDataset = datasets[0];
+      // Merge datasets, handling duplicates
+      const mergedDatasets = mergeDatasets(datasets, datasetsNew);
+
+      setDatasetList(mergedDatasets);
+
+      if (mergedDatasets.length > 0) {
+        const firstDataset = mergedDatasets[0];
         setSelectedDataset(firstDataset.datasetId);
         setUserSettings(firstDataset);
         await loadDocuments(firstDataset.datasetId, firstDataset.apiKey);
@@ -142,6 +154,48 @@ const Documents = () => {
       console.error("Error loading settings:", error);
       setIsLoading(false);
     }
+  };
+
+  // Helper function to merge datasets
+  const mergeDatasets = (datasets1: any[], datasets2: any[]) => {
+    // Create a map to avoid duplicates by datasetId
+    const datasetMap = new Map();
+
+    // Add all datasets from first array
+    datasets1.forEach((dataset) => {
+      datasetMap.set(dataset.datasetId, dataset);
+    });
+
+    // Add datasets from second array, only if not already present
+    datasets2.forEach((dataset) => {
+      if (!datasetMap.has(dataset.datasetId)) {
+        datasetMap.set(dataset.datasetId, dataset);
+      } else {
+        // If duplicate exists, you might want to merge properties
+        const existing = datasetMap.get(dataset.datasetId);
+        datasetMap.set(dataset.datasetId, {
+          ...existing,
+          ...dataset,
+          // Prefer appwrite's apiKey if available
+          apiKey: existing.apiKey || dataset.apiKey,
+          source: "both", // Indicate it exists in both sources
+        });
+      }
+    });
+
+    return Array.from(datasetMap.values());
+  };
+
+  // Alternative: Simple concatenation without duplicate checking
+  const mergeDatasetsSimple = (datasets1: any[], datasets2: any[]) => {
+    return [...datasets1, ...datasets2];
+  };
+
+  // Alternative: Merge with priority (appwrite datasets first)
+  const mergeDatasetsWithPriority = (datasets1: any[], datasets2: any[]) => {
+    const datasetIds = new Set(datasets1.map((d) => d.datasetId));
+    const uniqueDatasets2 = datasets2.filter((d) => !datasetIds.has(d.datasetId));
+    return [...datasets1, ...uniqueDatasets2];
   };
 
   const handleDatasetChange = async (datasetId: string) => {
