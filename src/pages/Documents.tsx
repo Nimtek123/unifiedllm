@@ -314,7 +314,7 @@ const Documents = () => {
                             <TableCell className="text-right">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  {!userPermissions.can_delete ||
+                                  {userPermissions.can_delete ||
                                     (!subUser && (
                                       <Button
                                         variant="ghost"
