@@ -222,7 +222,7 @@ const Upload = () => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(`https://ftp.unified-bi.org/upload?datasetId=${encodeURIComponent(datasetId)}`, {
+    const res = await fetch(`https://llmapi.unified-bi.org/upload?datasetId=${encodeURIComponent(datasetId)}`, {
       method: "POST",
       body: formData,
     });
