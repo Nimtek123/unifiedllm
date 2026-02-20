@@ -92,6 +92,12 @@ const Admin = () => {
   const [newKbName, setNewKbName] = useState("");
   const [creatingKb, setCreatingKb] = useState(false);
 
+  // Pagination state
+  const PAGE_SIZE = 10;
+  const [usersPage, setUsersPage] = useState(1);
+  const [llmPage, setLlmPage] = useState(1);
+  const [kbPage, setKbPage] = useState(1);
+
   useEffect(() => {
     checkAdminAndLoadData();
   }, []);
@@ -328,12 +334,21 @@ const Admin = () => {
       ds.id?.toLowerCase().includes(kbSearchTerm.toLowerCase()),
   );
 
+  // Pagination helpers
+  const totalUsersPages = Math.max(1, Math.ceil(filteredSettings.length / PAGE_SIZE));
+  const totalLlmPages = Math.max(1, Math.ceil(filteredLlmList.length / PAGE_SIZE));
+  const totalKbPages = Math.max(1, Math.ceil(filteredDatasets.length / PAGE_SIZE));
+
+  const pagedSettings = filteredSettings.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE);
+  const pagedLlmList = filteredLlmList.slice((llmPage - 1) * PAGE_SIZE, llmPage * PAGE_SIZE);
+  const pagedDatasets = filteredDatasets.slice((kbPage - 1) * PAGE_SIZE, kbPage * PAGE_SIZE);
+
   const getAccountBadge = (accountType: string | null) => {
     switch (accountType) {
       case "paid":
-        return <Badge className="bg-green-500">Paid</Badge>;
+        return <Badge className="bg-primary text-primary-foreground">Paid</Badge>;
       case "trial":
-        return <Badge className="bg-blue-500">Trial</Badge>;
+        return <Badge className="bg-secondary text-secondary-foreground">Trial</Badge>;
       default:
         return <Badge variant="secondary">Free</Badge>;
     }
@@ -426,7 +441,7 @@ const Admin = () => {
                     <Input
                       placeholder="Search by User ID or Dataset ID..."
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => { setSearchTerm(e.target.value); setUsersPage(1); }}
                       className="pl-10"
                     />
                   </div>
@@ -446,14 +461,14 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSettings.length === 0 ? (
+                      {pagedSettings.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             No user settings found.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredSettings.map((settings) => (
+                        pagedSettings.map((settings) => (
                           <TableRow key={settings.$id}>
                             <TableCell className="font-mono text-xs">{getUserDisplayName(settings.userId)}</TableCell>
                             <TableCell>
@@ -568,7 +583,29 @@ const Admin = () => {
                   </Table>
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-4">Total users: {filteredSettings.length}</p>
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredSettings.length} total · Page {usersPage} of {totalUsersPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={usersPage <= 1}
+                      onClick={() => setUsersPage((p) => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={usersPage >= totalUsersPages}
+                      onClick={() => setUsersPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -593,7 +630,7 @@ const Admin = () => {
                     <Input
                       placeholder="Search by User ID, LLM ID, or LLM Name..."
                       value={llmSearchTerm}
-                      onChange={(e) => setLlmSearchTerm(e.target.value)}
+                      onChange={(e) => { setLlmSearchTerm(e.target.value); setLlmPage(1); }}
                       className="pl-10"
                     />
                   </div>
@@ -611,14 +648,14 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredLlmList.length === 0 ? (
+                      {pagedLlmList.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             No LLM assignments found.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredLlmList.map((llm) => (
+                        pagedLlmList.map((llm) => (
                           <TableRow key={llm.$id}>
                             <TableCell className="font-mono text-xs">{getUserDisplayName(llm.userId)}</TableCell>
                             <TableCell>
@@ -655,10 +692,7 @@ const Admin = () => {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => {
-                                      setEditingLlmId(null);
-                                      setEditLlmForm({});
-                                    }}
+                                    onClick={() => { setEditingLlmId(null); setEditLlmForm({}); }}
                                   >
                                     <X className="h-4 w-4" />
                                   </Button>
@@ -686,7 +720,19 @@ const Admin = () => {
                   </Table>
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-4">Total LLM assignments: {filteredLlmList.length}</p>
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredLlmList.length} total · Page {llmPage} of {totalLlmPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" disabled={llmPage <= 1} onClick={() => setLlmPage((p) => p - 1)}>
+                      Previous
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={llmPage >= totalLlmPages} onClick={() => setLlmPage((p) => p + 1)}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -711,7 +757,7 @@ const Admin = () => {
                     <Input
                       placeholder="Search by name or ID..."
                       value={kbSearchTerm}
-                      onChange={(e) => setKbSearchTerm(e.target.value)}
+                      onChange={(e) => { setKbSearchTerm(e.target.value); setKbPage(1); }}
                       className="pl-10"
                     />
                   </div>
@@ -728,14 +774,14 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredDatasets.length === 0 ? (
+                      {pagedDatasets.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                             No knowledge bases found.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredDatasets.map((ds) => (
+                        pagedDatasets.map((ds) => (
                           <TableRow key={ds.id}>
                             <TableCell className="font-medium">{ds.name}</TableCell>
                             <TableCell className="font-mono text-xs">{ds.id}</TableCell>
@@ -750,7 +796,19 @@ const Admin = () => {
                   </Table>
                 </div>
 
-                <p className="text-sm text-muted-foreground mt-4">Total knowledge bases: {filteredDatasets.length}</p>
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    {filteredDatasets.length} total · Page {kbPage} of {totalKbPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" disabled={kbPage <= 1} onClick={() => setKbPage((p) => p - 1)}>
+                      Previous
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={kbPage >= totalKbPages} onClick={() => setKbPage((p) => p + 1)}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
