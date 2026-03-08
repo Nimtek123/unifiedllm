@@ -174,6 +174,7 @@ const Auth = () => {
         JSON.stringify({
           userId: session.userId,
           sessionId: session.$id,
+          sessionSecret: session.secret,
           email,
           encodedPassword,
         }),
